@@ -1,6 +1,23 @@
-import { useQuery } from 'convex/react';
-import { Link } from 'react-router-dom';
-import { api } from '../../convex/_generated/api';
+import React from "react";
+import { useQuery } from "convex/react";
+import { Link } from "react-router-dom";
+import { api } from "../../convex/_generated/api";
+import {
+  ChatCircle,
+  Lightning,
+  Lock,
+  Rocket,
+  Plug,
+  Globe,
+  Wrench,
+  CheckCircle,
+  DeviceMobile,
+  Robot,
+  Confetti,
+  Key,
+  ClipboardText,
+  XLogo,
+} from "@phosphor-icons/react";
 
 export function LandingPage() {
   // Fetch public activity feed
@@ -9,7 +26,7 @@ export function LandingPage() {
   // Fetch tweets to display on landing (if enabled in SyncBoard)
   const landingTweets = useQuery(api.xTwitter.getLandingTweets, { limit: 5 });
 
-  const agentName = agentConfig?.name || 'ClawSync';
+  const agentName = agentConfig?.name || "ClawSync";
 
   return (
     <div className="landing-page">
@@ -18,13 +35,28 @@ export function LandingPage() {
         <div className="container">
           <div className="header-content">
             <Link to="/" className="logo-link">
-              <img src="/clawsync-logo.svg" alt="ClawSync" className="logo-img" onError={(e) => { e.currentTarget.src = '/clawsync-logo.png'; }} />
+              <img
+                src="/clawsync-logo.svg"
+                alt="ClawSync"
+                className="logo-img"
+                onError={(e) => {
+                  e.currentTarget.src = "/clawsync-logo.png";
+                }}
+              />
             </Link>
             <nav className="header-nav">
-              <a href="https://github.com/waynesutton/clawsync" target="_blank" rel="noopener noreferrer">
+              <a
+                href="https://github.com/waynesutton/clawsync"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 GitHub
               </a>
-              <a href="https://docs.clawsync.dev" target="_blank" rel="noopener noreferrer">
+              <a
+                href="https://docs.clawsync.dev"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 Docs
               </a>
               <Link to="/chat" className="btn btn-primary">
@@ -40,12 +72,14 @@ export function LandingPage() {
         <div className="container">
           <div className="hero-content">
             <h1 className="hero-title">
-              Your AI agent,<br />
+              Your AI agent,
+              <br />
               <span className="hero-highlight">open source</span>
             </h1>
             <p className="hero-description">
-              Deploy a personal AI agent with chat UI, skills system, MCP support,
-              and multi-model routing. Fork, customize, and own your AI experience.
+              Deploy a personal AI agent with chat UI, skills system, MCP
+              support, and multi-model routing. Fork, customize, and own your AI
+              experience.
             </p>
             <div className="hero-actions">
               <Link to="/chat" className="btn btn-primary btn-lg">
@@ -76,34 +110,64 @@ export function LandingPage() {
           <h2 className="section-title">Everything you need</h2>
           <div className="features-grid">
             <div className="feature-card">
-              <div className="feature-icon">&#128172;</div>
+              <div className="feature-icon">
+                <ChatCircle size={32} weight="regular" />
+              </div>
               <h3>Public Chat UI</h3>
-              <p>Clean, real-time chat interface with streaming responses and markdown support.</p>
+              <p>
+                Clean, real-time chat interface with streaming responses and
+                markdown support.
+              </p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">&#9889;</div>
+              <div className="feature-icon">
+                <Lightning size={32} weight="regular" />
+              </div>
               <h3>Skills System</h3>
-              <p>Template skills, webhook skills, or code skills. Extend your agent with any capability.</p>
+              <p>
+                Template skills, webhook skills, or code skills. Extend your
+                agent with any capability.
+              </p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">&#128274;</div>
+              <div className="feature-icon">
+                <Lock size={32} weight="regular" />
+              </div>
               <h3>SyncBoard Admin</h3>
-              <p>Private dashboard to configure your agent, manage skills, and monitor activity.</p>
+              <p>
+                Private dashboard to configure your agent, manage skills, and
+                monitor activity.
+              </p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">&#128640;</div>
+              <div className="feature-icon">
+                <Rocket size={32} weight="regular" />
+              </div>
               <h3>Multi-Model</h3>
-              <p>Claude, GPT, Gemini, or any OpenRouter model. Switch providers without code changes.</p>
+              <p>
+                Claude, GPT, Gemini, or any OpenRouter model. Switch providers
+                without code changes.
+              </p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">&#128268;</div>
+              <div className="feature-icon">
+                <Plug size={32} weight="regular" />
+              </div>
               <h3>MCP Support</h3>
-              <p>Connect to external MCP servers or expose your agent as an MCP server.</p>
+              <p>
+                Connect to external MCP servers or expose your agent as an MCP
+                server.
+              </p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">&#127760;</div>
+              <div className="feature-icon">
+                <Globe size={32} weight="regular" />
+              </div>
               <h3>Channel Integrations</h3>
-              <p>Telegram, Discord, WhatsApp, Slack, Email. One agent, many channels.</p>
+              <p>
+                Telegram, Discord, WhatsApp, Slack, Email. One agent, many
+                channels.
+              </p>
             </div>
           </div>
         </div>
@@ -121,25 +185,36 @@ export function LandingPage() {
               <div className="activity-loading">Loading activity...</div>
             ) : publicActivity.length === 0 ? (
               <div className="activity-empty">
-                No public activity yet. Start a conversation to see activity here.
+                No public activity yet. Start a conversation to see activity
+                here.
               </div>
             ) : (
-              publicActivity.map((activity: { _id: string; actionType: string; summary: string; timestamp: number; channel?: string }) => (
-                <div key={activity._id} className="activity-item">
-                  <div className="activity-icon">
-                    {getActivityIcon(activity.actionType)}
+              publicActivity.map(
+                (activity: {
+                  _id: string;
+                  actionType: string;
+                  summary: string;
+                  timestamp: number;
+                  channel?: string;
+                }) => (
+                  <div key={activity._id} className="activity-item">
+                    <div className="activity-icon">
+                      {getActivityIcon(activity.actionType)}
+                    </div>
+                    <div className="activity-content">
+                      <p className="activity-summary">{activity.summary}</p>
+                      <span className="activity-time">
+                        {formatTimeAgo(activity.timestamp)}
+                      </span>
+                    </div>
+                    {activity.channel && (
+                      <span className="activity-channel">
+                        {activity.channel}
+                      </span>
+                    )}
                   </div>
-                  <div className="activity-content">
-                    <p className="activity-summary">{activity.summary}</p>
-                    <span className="activity-time">
-                      {formatTimeAgo(activity.timestamp)}
-                    </span>
-                  </div>
-                  {activity.channel && (
-                    <span className="activity-channel">{activity.channel}</span>
-                  )}
-                </div>
-              ))
+                ),
+              )
             )}
           </div>
           <div className="activity-cta">
@@ -159,39 +234,58 @@ export function LandingPage() {
               Recent posts from the agent on X (Twitter)
             </p>
             <div className="tweets-grid">
-              {landingTweets.map((tweet: { _id: string; tweetId: string; text: string; authorUsername: string; authorDisplayName?: string; authorProfileImageUrl?: string; postedAt: number; likeCount?: number }) => (
-                <a
-                  key={tweet._id}
-                  href={`https://x.com/${tweet.authorUsername}/status/${tweet.tweetId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="tweet-card"
-                >
-                  <div className="tweet-header">
-                    {tweet.authorProfileImageUrl && (
-                      <img
-                        src={tweet.authorProfileImageUrl}
-                        alt=""
-                        className="tweet-avatar"
-                      />
-                    )}
-                    <div className="tweet-author-info">
-                      <span className="tweet-display-name">
-                        {tweet.authorDisplayName || tweet.authorUsername}
+              {landingTweets.map(
+                (tweet: {
+                  _id: string;
+                  tweetId: string;
+                  text: string;
+                  authorUsername: string;
+                  authorDisplayName?: string;
+                  authorProfileImageUrl?: string;
+                  postedAt: number;
+                  likeCount?: number;
+                }) => (
+                  <a
+                    key={tweet._id}
+                    href={`https://x.com/${tweet.authorUsername}/status/${tweet.tweetId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="tweet-card"
+                  >
+                    <div className="tweet-header">
+                      {tweet.authorProfileImageUrl && (
+                        <img
+                          src={tweet.authorProfileImageUrl}
+                          alt=""
+                          className="tweet-avatar"
+                        />
+                      )}
+                      <div className="tweet-author-info">
+                        <span className="tweet-display-name">
+                          {tweet.authorDisplayName || tweet.authorUsername}
+                        </span>
+                        <span className="tweet-username">
+                          @{tweet.authorUsername}
+                        </span>
+                      </div>
+                      <span className="tweet-x-logo">
+                        <XLogo size={20} weight="regular" />
                       </span>
-                      <span className="tweet-username">@{tweet.authorUsername}</span>
                     </div>
-                    <span className="tweet-x-logo">𝕏</span>
-                  </div>
-                  <p className="tweet-text">{tweet.text}</p>
-                  <div className="tweet-footer">
-                    <span className="tweet-time">{formatTimeAgo(tweet.postedAt)}</span>
-                    {tweet.likeCount !== undefined && (
-                      <span className="tweet-likes">{tweet.likeCount} likes</span>
-                    )}
-                  </div>
-                </a>
-              ))}
+                    <p className="tweet-text">{tweet.text}</p>
+                    <div className="tweet-footer">
+                      <span className="tweet-time">
+                        {formatTimeAgo(tweet.postedAt)}
+                      </span>
+                      {tweet.likeCount !== undefined && (
+                        <span className="tweet-likes">
+                          {tweet.likeCount} likes
+                        </span>
+                      )}
+                    </div>
+                  </a>
+                ),
+              )}
             </div>
           </div>
         </section>
@@ -206,7 +300,9 @@ export function LandingPage() {
               <span className="step-number">1</span>
               <div className="step-content">
                 <h4>Clone the repo</h4>
-                <code className="step-code">git clone https://github.com/waynesutton/clawsync.git</code>
+                <code className="step-code">
+                  git clone https://github.com/waynesutton/clawsync.git
+                </code>
               </div>
             </div>
             <div className="step">
@@ -220,7 +316,9 @@ export function LandingPage() {
               <span className="step-number">3</span>
               <div className="step-content">
                 <h4>Set your API key</h4>
-                <code className="step-code">ANTHROPIC_API_KEY in Convex Dashboard</code>
+                <code className="step-code">
+                  ANTHROPIC_API_KEY in Convex Dashboard
+                </code>
               </div>
             </div>
             <div className="step">
@@ -239,7 +337,14 @@ export function LandingPage() {
         <div className="container">
           <div className="footer-content">
             <div className="footer-brand">
-              <img src="/clawsync-logo.svg" alt="ClawSync" className="footer-logo" onError={(e) => { e.currentTarget.src = '/clawsync-logo.png'; }} />
+              <img
+                src="/clawsync-logo.svg"
+                alt="ClawSync"
+                className="footer-logo"
+                onError={(e) => {
+                  e.currentTarget.src = "/clawsync-logo.png";
+                }}
+              />
               <p className="footer-tagline">Open source AI agent platform</p>
             </div>
             <div className="footer-links">
@@ -251,15 +356,51 @@ export function LandingPage() {
               </div>
               <div className="footer-column">
                 <h5>Resources</h5>
-                <a href="https://github.com/waynesutton/clawsync" target="_blank" rel="noopener noreferrer">GitHub</a>
-                <a href="https://github.com/waynesutton/clawsync/issues" target="_blank" rel="noopener noreferrer">Issues</a>
-                <a href="https://discord.gg/clawsync" target="_blank" rel="noopener noreferrer">Discord</a>
+                <a
+                  href="https://github.com/waynesutton/clawsync"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  GitHub
+                </a>
+                <a
+                  href="https://github.com/waynesutton/clawsync/issues"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Issues
+                </a>
+                <a
+                  href="https://discord.gg/clawsync"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Discord
+                </a>
               </div>
               <div className="footer-column">
                 <h5>Built With</h5>
-                <a href="https://convex.dev" target="_blank" rel="noopener noreferrer">Convex</a>
-                <a href="https://workos.com" target="_blank" rel="noopener noreferrer">WorkOS</a>
-                <a href="https://vercel.com/font" target="_blank" rel="noopener noreferrer">Geist</a>
+                <a
+                  href="https://convex.dev"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Convex
+                </a>
+                <a
+                  href="https://workos.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  WorkOS
+                </a>
+                <a
+                  href="https://vercel.com/font"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Geist
+                </a>
               </div>
             </div>
           </div>
@@ -409,8 +550,8 @@ export function LandingPage() {
         }
 
         .feature-icon {
-          font-size: 2rem;
           margin-bottom: var(--space-4);
+          color: var(--interactive);
         }
 
         .feature-card h3 {
@@ -706,19 +847,20 @@ export function LandingPage() {
 }
 
 // Helper functions
-function getActivityIcon(actionType: string): string {
-  const icons: Record<string, string> = {
-    chat_message: '💬',
-    skill_invocation: '⚡',
-    skill_created: '🔧',
-    skill_approved: '✅',
-    channel_message: '📱',
-    agent_response: '🤖',
-    setup_complete: '🎉',
-    syncboard_login: '🔐',
-    x_post: '𝕏',
-    x_reply: '𝕏',
-    default: '📋',
+function getActivityIcon(actionType: string): React.ReactNode {
+  const iconProps = { size: 18, weight: "regular" as const };
+  const icons: Record<string, React.ReactNode> = {
+    chat_message: <ChatCircle {...iconProps} />,
+    skill_invocation: <Lightning {...iconProps} />,
+    skill_created: <Wrench {...iconProps} />,
+    skill_approved: <CheckCircle {...iconProps} />,
+    channel_message: <DeviceMobile {...iconProps} />,
+    agent_response: <Robot {...iconProps} />,
+    setup_complete: <Confetti {...iconProps} />,
+    syncboard_login: <Key {...iconProps} />,
+    x_post: <XLogo {...iconProps} />,
+    x_reply: <XLogo {...iconProps} />,
+    default: <ClipboardText {...iconProps} />,
   };
   return icons[actionType] || icons.default;
 }
@@ -726,7 +868,7 @@ function getActivityIcon(actionType: string): string {
 function formatTimeAgo(timestamp: number): string {
   const seconds = Math.floor((Date.now() - timestamp) / 1000);
 
-  if (seconds < 60) return 'just now';
+  if (seconds < 60) return "just now";
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
   return `${Math.floor(seconds / 86400)}d ago`;

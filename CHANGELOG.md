@@ -65,11 +65,33 @@ All notable changes to ClawSync are documented here.
 - Created CHANGELOG.md
 - Created TASK.md for progress tracking
 
+#### ClawSync Challenge
+- Added challenge section on features.html
+- $500 prize for first 3 live demos posted on X
+- Requirements: show at least 3 agent features
+- Dark background with trophy icon
+
+#### Icon System
+- Replaced all emojis with Phosphor icons (@phosphor-icons/react)
+- Updated LandingPage.tsx with Phosphor icons for features and activity
+- Updated SyncBoardLayout.tsx sidebar navigation with Phosphor icons
+- Updated SyncBoard.tsx navigation with Phosphor icons
+- Updated SyncBoardChannels.tsx with brand logos (Telegram, Discord, etc.)
+- Updated SyncBoardActivity.tsx with Phosphor icons
+- Updated ActivityFeed.tsx with Phosphor icons
+- Updated SyncBoardSkillNew.tsx with Phosphor icons
+- Updated SetupWizard.tsx with HandWaving and Check icons
+- Updated features.html with inline SVG Phosphor icons
+
 ### Changed
 
-- features.html logo increased from 36px to 48px
+- features.html logo increased from 36px to 54px
 - features.html hero description text reduced from 1.25rem to 1rem
 - features.html docs links now point to docs.html instead of GitHub README
+- Removed all emojis from React components and static HTML
+- Commented out Self-Hosted feature card on features.html
+- Removed "No Vercel or Netlify required" messaging from README and docs
+- Renamed docs.html "Self Hosting" section to "Deployment"
 - Setup wizard now uses logo image instead of text
 - Login page uses logo image instead of text
 - SyncBoard sidebar includes logo and X navigation item

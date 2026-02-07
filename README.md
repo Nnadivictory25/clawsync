@@ -81,8 +81,6 @@ Visit http://localhost:5173 and complete the setup wizard. This creates your age
 
 ## Deployment
 
-ClawSync uses **Convex Self Static Hosting** exclusively. No Vercel, Netlify, or external hosting required.
-
 ### Deploy to Production
 
 ```bash

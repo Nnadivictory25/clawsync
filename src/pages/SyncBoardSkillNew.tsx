@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { SyncBoardLayout } from '../components/syncboard/SyncBoardLayout';
+import { ClipboardText, Link as LinkIcon } from '@phosphor-icons/react';
 
 export function SyncBoardSkillNew() {
   const navigate = useNavigate();
@@ -68,7 +69,7 @@ export function SyncBoardSkillNew() {
             className={`type-btn ${skillType === 'template' ? 'active' : ''}`}
             onClick={() => setSkillType('template')}
           >
-            <span className="type-icon">📋</span>
+            <span className="type-icon"><ClipboardText size={32} weight="regular" /></span>
             <span className="type-label">Template Skill</span>
             <span className="type-desc">Use a pre-built template</span>
           </button>
@@ -76,7 +77,7 @@ export function SyncBoardSkillNew() {
             className={`type-btn ${skillType === 'webhook' ? 'active' : ''}`}
             onClick={() => setSkillType('webhook')}
           >
-            <span className="type-icon">🔗</span>
+            <span className="type-icon"><LinkIcon size={32} weight="regular" /></span>
             <span className="type-label">Webhook Skill</span>
             <span className="type-desc">Call an external API</span>
           </button>
@@ -202,7 +203,7 @@ export function SyncBoardSkillNew() {
         }
 
         .type-icon {
-          font-size: 2rem;
+          color: var(--interactive);
         }
 
         .type-label {

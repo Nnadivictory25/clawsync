@@ -1,6 +1,14 @@
+import React from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { SyncBoardLayout } from '../components/syncboard/SyncBoardLayout';
+import {
+  ChatCircle,
+  Lightning,
+  DeviceMobile,
+  Lock,
+  PushPin,
+} from '@phosphor-icons/react';
 
 export function SyncBoardActivity() {
   const activities = useQuery(api.activityLog.list, { limit: 100 });
@@ -11,18 +19,19 @@ export function SyncBoardActivity() {
     return new Date(timestamp).toLocaleString();
   };
 
-  const getActionIcon = (actionType: string) => {
+  const getActionIcon = (actionType: string): React.ReactNode => {
+    const iconProps = { size: 16, weight: 'regular' as const };
     switch (actionType) {
       case 'chat_message':
-        return '💬';
+        return <ChatCircle {...iconProps} />;
       case 'skill_invocation':
-        return '⚡';
+        return <Lightning {...iconProps} />;
       case 'channel_message':
-        return '📱';
+        return <DeviceMobile {...iconProps} />;
       case 'security_event':
-        return '🔒';
+        return <Lock {...iconProps} />;
       default:
-        return '📌';
+        return <PushPin {...iconProps} />;
     }
   };
 

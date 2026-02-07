@@ -1,5 +1,12 @@
+import React from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import {
+  ChatCircle,
+  Lightning,
+  DeviceMobile,
+  PushPin,
+} from '@phosphor-icons/react';
 import './ActivityFeed.css';
 
 export function ActivityFeed() {
@@ -15,16 +22,17 @@ export function ActivityFeed() {
     return new Date(timestamp).toLocaleDateString();
   };
 
-  const getActionIcon = (actionType: string) => {
+  const getActionIcon = (actionType: string): React.ReactNode => {
+    const iconProps = { size: 16, weight: 'regular' as const };
     switch (actionType) {
       case 'chat_message':
-        return '💬';
+        return <ChatCircle {...iconProps} />;
       case 'skill_invocation':
-        return '⚡';
+        return <Lightning {...iconProps} />;
       case 'channel_message':
-        return '📱';
+        return <DeviceMobile {...iconProps} />;
       default:
-        return '📌';
+        return <PushPin {...iconProps} />;
     }
   };
 

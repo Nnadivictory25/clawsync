@@ -2,20 +2,33 @@ import { Link, useLocation } from 'react-router-dom';
 import { ReactNode, useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import {
+  ChartBar,
+  Brain,
+  Robot,
+  Lightning,
+  Plug,
+  DeviceMobile,
+  XLogo,
+  Key,
+  ChatCircle,
+  ClipboardText,
+  Gear,
+} from '@phosphor-icons/react';
 import './SyncBoardLayout.css';
 
 const navItems = [
-  { path: '/syncboard', label: 'Overview', icon: '📊' },
-  { path: '/syncboard/soul', label: 'Soul Document', icon: '🧠' },
-  { path: '/syncboard/models', label: 'Models', icon: '🤖' },
-  { path: '/syncboard/skills', label: 'Skills', icon: '⚡' },
-  { path: '/syncboard/mcp', label: 'MCP Servers', icon: '🔌' },
-  { path: '/syncboard/channels', label: 'Channels', icon: '📱' },
-  { path: '/syncboard/x', label: 'X (Twitter)', icon: '𝕏' },
-  { path: '/syncboard/api', label: 'API Keys', icon: '🔑' },
-  { path: '/syncboard/threads', label: 'Threads', icon: '💬' },
-  { path: '/syncboard/activity', label: 'Activity Log', icon: '📋' },
-  { path: '/syncboard/config', label: 'Configuration', icon: '⚙️' },
+  { path: '/syncboard', label: 'Overview', Icon: ChartBar },
+  { path: '/syncboard/soul', label: 'Soul Document', Icon: Brain },
+  { path: '/syncboard/models', label: 'Models', Icon: Robot },
+  { path: '/syncboard/skills', label: 'Skills', Icon: Lightning },
+  { path: '/syncboard/mcp', label: 'MCP Servers', Icon: Plug },
+  { path: '/syncboard/channels', label: 'Channels', Icon: DeviceMobile },
+  { path: '/syncboard/x', label: 'X (Twitter)', Icon: XLogo },
+  { path: '/syncboard/api', label: 'API Keys', Icon: Key },
+  { path: '/syncboard/threads', label: 'Threads', Icon: ChatCircle },
+  { path: '/syncboard/activity', label: 'Activity Log', Icon: ClipboardText },
+  { path: '/syncboard/config', label: 'Configuration', Icon: Gear },
 ];
 
 interface SyncBoardLayoutProps {
@@ -72,7 +85,7 @@ export function SyncBoardLayout({ title, children }: SyncBoardLayoutProps) {
               to={item.path}
               className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
             >
-              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-icon"><item.Icon size={18} weight="regular" /></span>
               {item.label}
             </Link>
           ))}

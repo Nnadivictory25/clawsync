@@ -1,26 +1,35 @@
+import React from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { SyncBoardLayout } from '../components/syncboard/SyncBoardLayout';
+import {
+  TelegramLogo,
+  WhatsappLogo,
+  SlackLogo,
+  DiscordLogo,
+  EnvelopeSimple,
+  Link as LinkIcon,
+} from '@phosphor-icons/react';
 
-const channelInfo: Record<string, { icon: string; description: string }> = {
+const channelInfo: Record<string, { icon: React.ReactNode; description: string }> = {
   telegram: {
-    icon: '📱',
+    icon: <TelegramLogo size={32} weight="regular" />,
     description: 'Receive and respond to messages from Telegram',
   },
   whatsapp: {
-    icon: '💬',
+    icon: <WhatsappLogo size={32} weight="regular" />,
     description: 'Connect via Twilio WhatsApp API',
   },
   slack: {
-    icon: '💼',
+    icon: <SlackLogo size={32} weight="regular" />,
     description: 'Add as a Slack bot in your workspace',
   },
   discord: {
-    icon: '🎮',
+    icon: <DiscordLogo size={32} weight="regular" />,
     description: 'Add as a Discord bot to your server',
   },
   email: {
-    icon: '📧',
+    icon: <EnvelopeSimple size={32} weight="regular" />,
     description: 'Receive and reply to emails via Resend',
   },
 };
@@ -56,7 +65,7 @@ export function SyncBoardChannels() {
         <div className="channels-grid">
           {channels?.map((channel: { _id: string; channelType: string; displayName: string; enabled: boolean; rateLimitPerMinute: number; webhookUrl?: string }) => {
             const info = channelInfo[channel.channelType] || {
-              icon: '🔗',
+              icon: <LinkIcon size={32} weight="regular" />,
               description: 'Custom channel',
             };
 
@@ -146,7 +155,7 @@ export function SyncBoardChannels() {
         }
 
         .channel-icon {
-          font-size: 2rem;
+          color: var(--interactive);
         }
 
         .channel-info h3 {

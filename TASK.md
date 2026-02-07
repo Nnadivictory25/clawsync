@@ -118,6 +118,30 @@
   - Replaced with solid `var(--bg-primary)`
   - Consistent flat backgrounds throughout
 
+- [x] Phosphor Icons
+  - Replaced all emojis with Phosphor icons
+  - Updated LandingPage.tsx (features, activity icons)
+  - Updated SyncBoardLayout.tsx (sidebar nav)
+  - Updated SyncBoard.tsx (sidebar nav)
+  - Updated SyncBoardChannels.tsx (brand logos)
+  - Updated SyncBoardActivity.tsx (action icons)
+  - Updated ActivityFeed.tsx (action icons)
+  - Updated SyncBoardSkillNew.tsx (skill type icons)
+  - Updated SetupWizard.tsx (welcome and complete icons)
+  - Updated features.html (inline SVG icons)
+
+- [x] ClawSync Challenge section
+  - Added to features.html above "Everything you need"
+  - $500 prize, swag, credits for first 3 live demos
+  - Dark background with trophy icon
+  - Requirements: at least 3 agent features on X
+
+- [x] Deployment messaging cleanup
+  - Commented out Self-Hosted feature card on features.html
+  - Removed "No Vercel or Netlify required" from README.md
+  - Removed "No Vercel or Netlify required" from docs.html
+  - Renamed "Self Hosting" section to "Deployment" in docs.html
+
 ---
 
 ## In Progress

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import { HandWaving, Check } from '@phosphor-icons/react';
 
 type Step = 'welcome' | 'name' | 'soul' | 'model' | 'preview' | 'complete';
 
@@ -88,7 +89,7 @@ export function SetupWizard() {
       case 'welcome':
         return (
           <div className="step-content">
-            <div className="step-icon">&#128075;</div>
+            <div className="step-icon"><HandWaving size={48} weight="regular" /></div>
             <h2>Welcome to ClawSync</h2>
             <p className="step-description">
               Let's set up your personal AI agent. This wizard will guide you through
@@ -254,7 +255,7 @@ export function SetupWizard() {
       case 'complete':
         return (
           <div className="step-content">
-            <div className="step-icon success">&#10003;</div>
+            <div className="step-icon success"><Check size={48} weight="bold" /></div>
             <h2>Setup Complete!</h2>
             <p className="step-description">
               Your agent is ready. Redirecting you to the chat interface...
@@ -324,8 +325,8 @@ export function SetupWizard() {
         }
 
         .step-icon {
-          font-size: 3rem;
           margin-bottom: var(--space-4);
+          color: var(--interactive);
         }
 
         .step-icon.success {
