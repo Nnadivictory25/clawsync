@@ -1,0 +1,20 @@
+{
+  "pre-commit": [
+    {
+      "name": "convex-typecheck",
+      "command": "npm run typecheck",
+      "description": "Run TypeScript type checking"
+    }
+  ],
+  "post-tool-use": [
+    {
+      "name": "convex-codegen",
+      "matcher": {
+        "tool": ["Write", "Edit"],
+        "path": ["convex/*.ts", "convex/**/*.ts"]
+      },
+      "command": "npx convex dev --once --typecheck=disable",
+      "description": "Regenerate Convex types after schema or function changes"
+    }
+  ]
+}

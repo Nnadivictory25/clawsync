@@ -1,15 +1,23 @@
-# ClawSync
+<p align="center">
+  <img src="public/clawsync-logo.svg" alt="ClawSync" width="180" />
+</p>
 
-Open source AI agent platform built with React + Convex. Deploy your personal AI agent with a public chat UI, private admin dashboard (SyncBoard), skills system, MCP support, and multi-model routing.
+<h1 align="center">ClawSync</h1>
+
+<p align="center">
+  Open source AI agent platform built with React + Convex.<br>
+  Deploy your personal AI agent with chat UI, skills system, MCP support, and multi-model routing.
+</p>
 
 ## Features
 
 - **Public Chat UI** - Clean, real-time chat with streaming responses
 - **SyncBoard Admin** - Private dashboard to manage your agent
 - **Skills System** - Template, webhook, or code-based skills
-- **Multi-Model** - Claude, GPT, Gemini, or any OpenRouter model
+- **Multi-Model** - Claude, GPT, Grok, Gemini, or any OpenRouter model
 - **MCP Support** - Connect to MCP servers or expose your agent as one
 - **Channel Integrations** - Telegram, Discord, WhatsApp, Slack, Email
+- **X (Twitter) Integration** - Read, reply, and post tweets from your agent
 - **Live Activity Feed** - Public real-time log of agent actions
 - **Self-Hosted** - No external hosting required (Convex Self Static Hosting)
 
@@ -51,6 +59,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 Optional for multi-model support:
 ```
 OPENAI_API_KEY=sk-...
+XAI_API_KEY=xai-...
 OPENROUTER_API_KEY=sk-or-...
 ```
 
@@ -120,6 +129,55 @@ Enterprise SSO support via WorkOS AuthKit is planned. The codebase is prepared f
 
 See [Convex AuthKit docs](https://docs.convex.dev/auth/authkit/) when ready to enable.
 
+## X (Twitter) Integration
+
+Connect your agent to X (Twitter) to read tweets, reply to mentions, and post updates.
+
+### Setup
+
+1. Create a project at [X Developer Portal](https://developer.x.com/en/portal/dashboard)
+2. Get your API credentials (OAuth 1.0a for posting, Bearer Token for reading)
+3. Set environment variables in Convex Dashboard:
+
+```
+X_BEARER_TOKEN=...          # For reading tweets
+X_API_KEY=...               # OAuth 1.0a Consumer Key
+X_API_SECRET=...            # OAuth 1.0a Consumer Secret
+X_ACCESS_TOKEN=...          # OAuth 1.0a Access Token
+X_ACCESS_TOKEN_SECRET=...   # OAuth 1.0a Access Token Secret
+```
+
+4. Enable in SyncBoard > X (Twitter)
+5. Configure options:
+   - **Show on Landing** - Display agent tweets on your landing page
+   - **Auto-Reply** - Automatically reply to mentions
+   - **Post from Agent** - Allow the agent to post tweets
+
+### Features
+
+- Read tweets and thread conversations
+- Reply to mentions automatically
+- Post tweets from the agent
+- Display selected tweets on landing page
+- Activity logging for all X interactions
+
+## xAI (Grok) Models
+
+ClawSync supports xAI's Grok models alongside Claude, GPT, and others.
+
+### Setup
+
+1. Get an API key from [xAI Console](https://console.x.ai/)
+2. Set `XAI_API_KEY` in Convex Dashboard
+3. Select Grok models in SyncBoard > Models or during setup
+
+### Available Models
+
+| Model | Description |
+|-------|-------------|
+| grok-3 | xAI flagship model |
+| grok-3-fast | Fast variant for quicker responses |
+
 ## Project Structure
 
 ```
@@ -131,21 +189,24 @@ clawsync/
 │   │   ├── toolLoader.ts     # Dynamic tool loading
 │   │   └── modelRouter.ts    # Multi-model routing
 │   ├── auth.config.ts         # WorkOS config (placeholder)
+│   ├── xTwitter.ts            # X/Twitter integration
 │   ├── staticHosting.ts       # Self-static-hosting API
 │   ├── schema.ts              # Database schema
 │   ├── convex.config.ts       # Component registration
 │   └── http.ts                # HTTP endpoints
 ├── src/                       # React frontend
 │   ├── pages/
-│   │   ├── LandingPage.tsx   # Public landing with activity feed
+│   │   ├── LandingPage.tsx   # Public landing with tweets + activity
 │   │   ├── ChatPage.tsx      # Chat UI
 │   │   ├── SetupWizard.tsx   # First-run setup
-│   │   ├── SyncBoard*.tsx    # Admin pages
+│   │   ├── SyncBoardX.tsx    # X/Twitter config
+│   │   ├── SyncBoard*.tsx    # Other admin pages
 │   │   └── SyncBoardLogin.tsx # Password login
 │   ├── components/
 │   └── styles/
 │       ├── tokens.css         # Design tokens (Geist fonts)
 │       └── global.css
+├── features.html              # Standalone features page
 ├── content/
 │   └── soul.md                # Default soul document
 ├── AGENTS.md                  # For AI coding agents
@@ -220,5 +281,4 @@ MIT License. Fork it, own it.
 
 ---
 
-Built with [Convex](https://convex.dev), [WorkOS](https://workos.com) (coming soon), and [Geist](https://vercel.com/font).
-# clawsync
+Built with [Convex](https://convex.dev), [WorkOS](https://workos.com) (coming soon), [xAI](https://x.ai), and [Geist](https://vercel.com/font).
