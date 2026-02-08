@@ -25,7 +25,7 @@ Be one of the first three to deploy ClawSync and show it off. Post a live demo o
 - Post a live demo video on X showing your deployed ClawSync agent
 - Demonstrate at least 3 different agent features (chat, skills, MCP, channels, X integration, etc.)
 - SyncBoard admin dashboard and Live Activity Feed do not count as features
-- Tag **@clawsync** and use **#ClawSyncChallenge**
+- Tag **@convex** and use **#ClawSyncChallenge**
 - First 3 valid submissions win
 
 ## Features
