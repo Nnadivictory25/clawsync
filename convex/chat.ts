@@ -165,34 +165,44 @@ export const send = action({
             content.push({ type: 'text', text: messageText });
           }
           
-          // Add image attachments - fetch and convert to base64
+          // Add image attachments
           for (const attachment of args.attachments!) {
             if (isImageFile(attachment.fileType)) {
               try {
-                console.log('Processing image:', attachment.fileName, 'URL:', attachment.url);
-                const imageResponse = await fetch(attachment.url);
-                if (imageResponse.ok) {
-                  const imageBuffer = await imageResponse.arrayBuffer();
-                  const base64Image = Buffer.from(imageBuffer).toString('base64');
-                  const mimeType = attachment.fileType || 'image/jpeg';
-                  const dataUrl = `data:${mimeType};base64,${base64Image}`;
-                  
-                  content.push({
-                    type: 'image',
-                    image: dataUrl,
-                  });
-                  console.log('Image processed successfully, size:', base64Image.length);
-                } else {
-                  console.error('Failed to fetch image:', attachment.url, 'Status:', imageResponse.status);
-                  // Fallback to URL if fetch fails
+                console.log('Processing image:', attachment.fileName);
+                
+                // Check if already a data URL (base64)
+                if (attachment.url.startsWith('data:')) {
+                  // Already base64, use directly
                   content.push({
                     type: 'image',
                     image: attachment.url,
                   });
+                  console.log('Using provided base64 image');
+                } else {
+                  // Fetch and convert to base64 (for URLs from storage)
+                  const imageResponse = await fetch(attachment.url);
+                  if (imageResponse.ok) {
+                    const imageBuffer = await imageResponse.arrayBuffer();
+                    const base64Image = Buffer.from(imageBuffer).toString('base64');
+                    const mimeType = attachment.fileType || 'image/jpeg';
+                    const dataUrl = `data:${mimeType};base64,${base64Image}`;
+                    
+                    content.push({
+                      type: 'image',
+                      image: dataUrl,
+                    });
+                    console.log('Image processed successfully');
+                  } else {
+                    console.error('Failed to fetch image:', attachment.url);
+                    content.push({
+                      type: 'image',
+                      image: attachment.url,
+                    });
+                  }
                 }
               } catch (error) {
                 console.error('Error processing image:', error);
-                // Fallback to URL
                 content.push({
                   type: 'image',
                   image: attachment.url,

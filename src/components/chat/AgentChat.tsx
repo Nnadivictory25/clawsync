@@ -198,48 +198,25 @@ export function AgentChat({
           throw new Error(`File "${file.name}" is too large. Maximum size is ${maxSizeMB}MB for ${isPDF ? 'PDFs' : 'images'}.`);
         }
         
-        // Generate upload URL
-        const { uploadUrl, uploadToken } = await generateUploadUrl({
-          fileType: file.type,
-          fileName: file.name,
+        // Convert file to base64
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
         });
 
-        // Upload file to Convex storage
-        const uploadResponse = await fetch(uploadUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': file.type },
-          body: file,
-        });
-
-        if (!uploadResponse.ok) {
-          throw new Error(`Failed to upload ${file.name}`);
-        }
-
-        // Extract storageId from upload response
-        const uploadResult = await uploadResponse.json();
-        const storageId = uploadResult.storageId;
-
-        // Mark upload as complete (using token as identifier)
-        await markComplete({ uploadToken: uploadToken, storageId: storageId });
-
-        // Get the actual file URL
-        const fileUrl = await getFileUrlByToken({ uploadToken });
-        
-        if (!fileUrl) {
-          throw new Error(`Could not get file URL for ${file.name}`);
-        }
-
-        // Add to attachments
+        // Add to attachments with base64 data
         setAttachments((prev) => [...prev, {
-          uploadToken: uploadToken,
-          url: fileUrl,
+          uploadToken: `local-${Date.now()}-${Math.random()}`,
+          url: base64,
           fileName: file.name,
           fileType: file.type,
         }]);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload file');
-      console.error('Upload error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to process file');
+      console.error('File processing error:', err);
     } finally {
       setIsUploading(false);
       // Reset file input
