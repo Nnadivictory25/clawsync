@@ -48,6 +48,7 @@ export function AgentChat({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(null);
+  const [pendingAttachments, setPendingAttachments] = useState<Attachment[] | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -99,7 +100,7 @@ export function AgentChat({
           role: 'user',
           content: pendingUserMessage,
           timestamp: Date.now(),
-          attachments: attachments.length > 0 ? attachments : undefined,
+          attachments: pendingAttachments ?? undefined,
         });
       }
       return result;
@@ -158,12 +159,12 @@ export function AgentChat({
         role: 'user',
         content: pendingUserMessage,
         timestamp: Date.now(),
-        attachments: attachments.length > 0 ? attachments : undefined,
+        attachments: pendingAttachments ?? undefined,
       });
     }
 
     return result;
-  }, [threadMessages, toolResultMap, pendingUserMessage, attachments]);
+  }, [threadMessages, toolResultMap, pendingUserMessage, pendingAttachments, attachments]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -264,6 +265,9 @@ export function AgentChat({
     setInput('');
     setIsLoading(true);
     setPendingUserMessage(messageText);
+    setPendingAttachments(null);
+    // Clear any existing attachments in input
+    setAttachments([]);
 
     try {
       const result = await sendMessage({
@@ -287,6 +291,7 @@ export function AgentChat({
     } finally {
       setIsLoading(false);
       setPendingUserMessage(null);
+      setPendingAttachments(null);
       inputRef.current?.focus();
     }
   };
@@ -305,14 +310,19 @@ export function AgentChat({
     setError(null);
     setInput('');
     setIsLoading(true);
+    
+    // Capture attachments before clearing
+    const currentAttachments = [...attachments];
     setPendingUserMessage(trimmedInput || '(Image attached)');
+    setPendingAttachments(currentAttachments.length > 0 ? currentAttachments : null);
+    // Clear attachments immediately so they disappear from input
 
     try {
       const result = await sendMessage({
         threadId: threadId ?? undefined,
         message: trimmedInput,
         sessionId,
-        attachments: attachments.length > 0 ? attachments : undefined,
+        attachments: currentAttachments.length > 0 ? currentAttachments : undefined,
       });
 
       if (result.error) {
@@ -323,15 +333,13 @@ export function AgentChat({
       if (result.threadId && result.threadId !== threadId) {
         onThreadChange(result.threadId);
       }
-      
-      // Clear attachments after successful send
-      setAttachments([]);
     } catch (err) {
       setError('Failed to send message. Please try again.');
       console.error('Send error:', err);
     } finally {
       setIsLoading(false);
       setPendingUserMessage(null);
+      setPendingAttachments(null);
       inputRef.current?.focus();
     }
   };
@@ -346,7 +354,6 @@ export function AgentChat({
   const handleClearChat = () => {
     localStorage.removeItem('clawsync_thread_id');
     onThreadChange('');
-    setAttachments([]);
   };
 
   // Show typing indicator if loading or any message is still streaming
