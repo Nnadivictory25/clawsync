@@ -1,0 +1,65 @@
+.syncboard-tools {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.tools-header {
+  margin-bottom: 32px;
+}
+
+.tools-header h2 {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.tools-description {
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+
+.tools-list-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.tool-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.tool-item:hover {
+  background: var(--surface-hover);
+}
+
+.tool-item svg {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.tool-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tool-name {
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--text-primary);
+  font-family: monospace;
+}
+
+.tool-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+}

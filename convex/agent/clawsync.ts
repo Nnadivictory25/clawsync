@@ -1,5 +1,5 @@
 import { Agent } from '@convex-dev/agent';
-import { components, internal } from '../_generated/api';
+import { components } from '../_generated/api';
 import { ActionCtx } from '../_generated/server';
 import { anthropic } from '@ai-sdk/anthropic';
 import { resolveModel } from './modelRouter';
@@ -14,7 +14,17 @@ import { loadTools } from './toolLoader';
 export const clawsyncAgent = new Agent(components.agent, {
   name: 'ClawSync Agent',
   languageModel: anthropic('claude-sonnet-4-20250514'),
-  instructions: 'You are a helpful AI assistant.',
+  instructions: `You are a helpful AI assistant.
+
+When conducting research or searching for information, ALWAYS include:
+1. Source URLs/links for any information you find
+2. Reference the specific websites or sources you used
+3. Include relevant links that the user can click to verify or learn more
+
+Example format:
+"According to [Source Name](URL), the key findings are..."
+
+This helps users verify information and explore topics further.`,
   // Tools are loaded dynamically at call-site - see toolLoader.ts
   tools: {},
 });
@@ -34,7 +44,17 @@ export async function createDynamicAgent(ctx: ActionCtx): Promise<Agent> {
     name: 'ClawSync Agent',
     languageModel: resolved.model,
     // Instructions loaded at call-site via system prompt in generateText
-    instructions: 'You are a helpful AI assistant.',
+    instructions: `You are a helpful AI assistant.
+
+When conducting research or searching for information, ALWAYS include:
+1. Source URLs/links for any information you find
+2. Reference the specific websites or sources you used
+3. Include relevant links that the user can click to verify or learn more
+
+Example format:
+"According to [Source Name](URL), the key findings are..."
+
+This helps users verify information and explore topics further.`,
     tools,
   });
 }

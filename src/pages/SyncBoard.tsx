@@ -8,9 +8,13 @@ import {
   Lightning,
   Plug,
   DeviceMobile,
+  XLogo,
+  EnvelopeSimple,
+  Key,
   ChatCircle,
   ClipboardText,
   Gear,
+  Toolbox,
 } from '@phosphor-icons/react';
 import './SyncBoard.css';
 
@@ -19,8 +23,12 @@ const navItems = [
   { path: '/syncboard/soul', label: 'Soul Document', Icon: Brain },
   { path: '/syncboard/models', label: 'Models', Icon: Robot },
   { path: '/syncboard/skills', label: 'Skills', Icon: Lightning },
+  { path: '/syncboard/tools', label: 'Tools', Icon: Toolbox },
   { path: '/syncboard/mcp', label: 'MCP Servers', Icon: Plug },
   { path: '/syncboard/channels', label: 'Channels', Icon: DeviceMobile },
+  { path: '/syncboard/x', label: 'X (Twitter)', Icon: XLogo },
+  { path: '/syncboard/agentmail', label: 'AgentMail', Icon: EnvelopeSimple },
+  { path: '/syncboard/api', label: 'API Keys', Icon: Key },
   { path: '/syncboard/threads', label: 'Threads', Icon: ChatCircle },
   { path: '/syncboard/activity', label: 'Activity Log', Icon: ClipboardText },
   { path: '/syncboard/config', label: 'Configuration', Icon: Gear },
@@ -33,7 +41,6 @@ export function SyncBoard() {
   const activities = useQuery(api.activityLog.list, { limit: 10 });
 
   const activeSkills = skills?.filter((s: { status: string; approved: boolean }) => s.status === 'active' && s.approved).length ?? 0;
-  const pendingSkills = skills?.filter((s: { status: string; approved: boolean }) => s.status === 'pending' || !s.approved).length ?? 0;
 
   return (
     <div className="syncboard">
@@ -78,8 +85,8 @@ export function SyncBoard() {
                 <span className="stat-label">Active Skills</span>
               </div>
               <div className="stat-card">
-                <span className="stat-value">{pendingSkills}</span>
-                <span className="stat-label">Pending Approval</span>
+                <span className="stat-value">15</span>
+                <span className="stat-label">Tools</span>
               </div>
             </div>
 

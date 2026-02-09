@@ -153,3 +153,119 @@
   overflow-y: auto;
   margin: 0;
 }
+
+/* Message attachments */
+.message-attachments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.attachment-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+/* Image attachments */
+.message-image-attachment {
+  position: relative;
+  max-width: 300px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.message-image-attachment:hover {
+  transform: scale(1.02);
+}
+
+.attachment-image {
+  width: 100%;
+  height: auto;
+  max-height: 250px;
+  object-fit: cover;
+  display: block;
+}
+
+.image-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: var(--space-2);
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: white;
+  font-size: var(--text-xs);
+}
+
+.image-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* File attachments */
+.message-file-attachment {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  color: inherit;
+  transition: background-color var(--transition-fast);
+  max-width: 300px;
+}
+
+.message-file-attachment:hover {
+  background-color: var(--bg-primary);
+}
+
+.file-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background-color: var(--interactive);
+  color: white;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.file-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.file-name {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-type {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.file-download {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.message-file-attachment:hover .file-download {
+  color: var(--interactive);
+}

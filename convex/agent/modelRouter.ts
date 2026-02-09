@@ -2,6 +2,7 @@ import { ActionCtx } from '../_generated/server';
 import { internal } from '../_generated/api';
 import { anthropic } from '@ai-sdk/anthropic';
 import { openai } from '@ai-sdk/openai';
+import { google } from '@ai-sdk/google';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import type { LanguageModel } from 'ai';
 
@@ -40,11 +41,11 @@ export async function resolveModel(ctx: ActionCtx): Promise<ResolvedModel> {
   const config = await ctx.runQuery(internal.agentConfig.getConfig);
 
   if (!config) {
-    // Default to Claude Sonnet if no config
+    // Default to Google Gemini if no config
     return {
-      model: anthropic('claude-sonnet-4-20250514'),
-      provider: 'anthropic',
-      modelId: 'claude-sonnet-4-20250514',
+      model: google('gemini-2.5-pro') as unknown as LanguageModel,
+      provider: 'google',
+      modelId: 'gemini-2.5-pro',
       isFallback: false,
     };
   }
@@ -70,11 +71,11 @@ export async function resolveModel(ctx: ActionCtx): Promise<ResolvedModel> {
       };
     }
 
-    // Default fallback
+    // Default fallback to Google
     return {
-      model: anthropic('claude-sonnet-4-20250514'),
-      provider: 'anthropic',
-      modelId: 'claude-sonnet-4-20250514',
+      model: google('gemini-2.5-pro') as unknown as LanguageModel,
+      provider: 'google',
+      modelId: 'gemini-2.5-pro',
       isFallback: true,
     };
   }
@@ -91,14 +92,24 @@ function createModel(provider: string, modelId: string): LanguageModel {
     case 'openai':
       return openai(modelId);
 
+    case 'google':
+      return google(modelId) as LanguageModel;
+
     case 'openrouter': {
+      const apiKey = process.env.OPENROUTER_API_KEY;
+      const headers: Record<string, string> = {
+        'HTTP-Referer': 'https://clawsync.dev',
+        'X-Title': 'ClawSync',
+      };
+      
+      if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+      }
+      
       const openrouter = createOpenAICompatible({
         name: 'openrouter',
         baseURL: 'https://openrouter.ai/api/v1',
-        headers: {
-          'HTTP-Referer': 'https://clawsync.dev',
-          'X-Title': 'ClawSync',
-        },
+        headers,
       });
       return openrouter(modelId);
     }
@@ -155,6 +166,11 @@ export function getAvailableProviders(): Array<{
       id: 'openai',
       name: 'OpenAI',
       description: 'GPT models via direct API',
+    },
+    {
+      id: 'google',
+      name: 'Google',
+      description: 'Gemini models via Google AI',
     },
     {
       id: 'openrouter',

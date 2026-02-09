@@ -4,6 +4,13 @@ import { Doc } from '../_generated/dataModel';
 import { createTool } from '@convex-dev/agent';
 import { jsonSchema } from 'ai';
 import { checkSecurity, truncateForLog } from './security';
+import { createGeneratePDFTool } from './tools/generatePDF';
+import { createSendTelegramMessageTool } from './tools/sendTelegram';
+import { createSendEmailTool } from './tools/sendEmail';
+import { createPostTweetTool } from './tools/postTweet';
+import { createScheduleTaskTool } from './tools/scheduleTask';
+import { createListToolsTool } from './tools/listTools';
+import { createManageScheduleTools } from './tools/manageSchedule';
 
 /**
  * Tool Loader
@@ -41,41 +48,161 @@ export async function loadTools(ctx: ActionCtx): Promise<ToolSet> {
   // Load tools from enabled MCP servers
   try {
     const mcpServers = await ctx.runQuery(api.mcpServers.getEnabledApproved);
+    console.log(`[MCP] Found ${mcpServers.length} enabled MCP servers`);
 
-    for (const server of mcpServers) {
-      if (!server.url) continue;
+        for (const server of mcpServers) {
+      if (!server.url) {
+        console.log(`[MCP] Server ${server.name} has no URL, skipping`);
+        continue;
+      }
 
       try {
-        // Fetch tool list from MCP server (SSE transport requires Accept header)
-        const response = await fetch(server.url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json, text/event-stream',
-          },
-          body: JSON.stringify({ jsonrpc: '2.0', method: 'tools/list', params: {}, id: 1 }),
-        });
+        console.log(`[MCP] Fetching tools from ${server.name} at ${server.url}`);
+        
+        // Try both regular POST and GET for tools/list
+        let response;
+        let responseText;
+        
+        // Try POST first (MCP standard) with proper JSON-RPC 2.0 format
+        try {
+          response = await fetch(server.url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json, text/event-stream, */*',
+              'User-Agent': 'ClawSync-MCP-Client/1.0',
+            },
+            body: JSON.stringify({ 
+              jsonrpc: '2.0',
+              method: 'tools/list', 
+              params: {},
+              id: 1
+            }),
+          });
+          responseText = await response.text();
+        } catch (e) {
+          // Try GET as fallback
+          response = await fetch(server.url, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json, text/event-stream, */*',
+              'User-Agent': 'ClawSync-MCP-Client/1.0',
+            },
+          });
+          responseText = await response.text();
+        }
 
-        if (!response.ok) continue;
+        if (!response.ok) {
+          console.error(`[MCP] ${server.name} returned status ${response.status}`);
+          console.error(`[MCP] Response body:`, responseText.slice(0, 500));
+          continue;
+        }
 
-        const data = await response.json();
+        // Parse response - handle both JSON and SSE formats
+        let data;
+        try {
+          // Try parsing as regular JSON first
+          data = JSON.parse(responseText);
+        } catch (e) {
+          // Might be SSE format - try to extract JSON from data: lines
+          const jsonMatch = responseText.match(/data: ({.+})/);
+          if (jsonMatch) {
+            try {
+              data = JSON.parse(jsonMatch[1]);
+            } catch {
+              data = { tools: [] };
+            }
+          } else {
+            console.error(`[MCP] ${server.name} returned non-JSON:`, responseText.slice(0, 200));
+            continue;
+          }
+        }
+        
+        console.log(`[MCP] ${server.name} response:`, JSON.stringify(data).slice(0, 500));
+        
         const mcpTools = data.result?.tools || data.tools || [];
+        console.log(`[MCP] ${server.name} has ${mcpTools.length} tools`);
 
         for (const mcpTool of mcpTools) {
-          const safeName = (mcpTool.name as string)
+          const toolName = mcpTool.name as string;
+          const safeName = toolName
             .replace(/[^a-zA-Z0-9_-]/g, '_')
             .replace(/_+/g, '_')
             .slice(0, 128);
 
-          tools[safeName] = createMcpTool(server.url, mcpTool);
+          console.log(`[MCP] Registering tool: ${toolName} (safe: ${safeName})`);
+          
+          // Check if this overwrites an existing skill
+          if (tools[safeName]) {
+            console.log(`[MCP] Tool "${safeName}" conflicts with existing skill, keeping MCP version`);
+          }
+          
+          tools[safeName] = createMcpTool(server.url, mcpTool, server.name, server.apiKeyEnvVar);
         }
       } catch (e) {
-        console.error(`Failed to load tools from MCP server ${server.name}:`, e);
+        console.error(`[MCP] Failed to load tools from ${server.name}:`, e);
       }
     }
   } catch (e) {
-    console.error('Failed to load MCP servers:', e);
+    console.error('[MCP] Failed to load MCP servers:', e);
   }
+
+  // Add model switching tools (always available)
+  tools['list_available_models'] = createListModelsTool(ctx);
+  tools['switch_model'] = createSwitchModelTool(ctx);
+  tools['get_current_model'] = createGetCurrentModelTool(ctx);
+
+  // Add image generation tool (always available)
+  tools['generate_image'] = createGenerateImageTool();
+
+  // Add PDF generation tool (always available)
+  tools['generate_pdf'] = createGeneratePDFTool(ctx);
+
+  // Add Telegram send message tool (always available)
+  tools['send_telegram_message'] = createSendTelegramMessageTool(ctx);
+
+  // Add send email tool (uses AgentMail)
+  tools['send_email'] = createSendEmailTool(ctx);
+
+  // Add post tweet tool (uses X/Twitter)
+  tools['post_tweet'] = createPostTweetTool(ctx);
+
+  // Add schedule task tool (uses Convex cron jobs)
+  tools['schedule_task'] = createScheduleTaskTool(ctx);
+
+  // Add list tools utility
+  tools['list_tools'] = createListToolsTool(ctx);
+
+  // Add schedule management tools (not shown in UI but available to AI)
+  const scheduleManagementTools = createManageScheduleTools(ctx);
+  tools['list_scheduled_tasks'] = scheduleManagementTools.list_scheduled_tasks;
+  tools['delete_scheduled_task'] = scheduleManagementTools.delete_scheduled_task;
+  tools['toggle_scheduled_task'] = scheduleManagementTools.toggle_scheduled_task;
+
+  // Add utility tools
+  tools['get_current_date'] = createTool({
+    description: 'Get the current date and time. Use this when the user asks what day it is, what time it is, or what the current date is.',
+    args: jsonSchema<{ format?: 'short' | 'long' | 'iso' }>({
+      type: 'object',
+      properties: {
+        format: {
+          type: 'string',
+          enum: ['short', 'long', 'iso'],
+          description: 'Format of the date: short (MM/DD/YYYY), long (Month DD, YYYY), or iso (ISO 8601). Default is long.',
+        },
+      },
+    }),
+    handler: async () => {
+      const now = new Date();
+      return {
+        date: now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+        time: now.toLocaleTimeString('en-US'),
+        iso: now.toISOString(),
+        timestamp: now.getTime(),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      };
+    },
+  });
 
   return tools;
 }
@@ -83,36 +210,114 @@ export async function loadTools(ctx: ActionCtx): Promise<ToolSet> {
 /**
  * Create a tool that proxies to an MCP server
  */
-function createMcpTool(serverUrl: string, mcpTool: any) {
-  const schema = mcpTool.inputSchema || { type: 'object', properties: {} };
+function createMcpTool(serverUrl: string, mcpTool: any, serverName: string, apiKeyEnvVar?: string) {
+  const schema = mcpTool.inputSchema || mcpTool.input_schema || { type: 'object', properties: {} };
+  const toolName = mcpTool.name || mcpTool.id || 'unknown';
 
   return createTool({
-    description: mcpTool.description || mcpTool.name,
+    description: `[${serverName}] ${mcpTool.description || mcpTool.name}`,
     args: jsonSchema(schema),
     handler: async (_toolCtx: any, args: any) => {
       try {
-        const response = await fetch(serverUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json, text/event-stream',
-          },
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            method: 'tools/call',
-            params: { name: mcpTool.name, arguments: args },
-            id: 1,
-          }),
-        });
-
-        if (!response.ok) {
-          return { error: `MCP tool call failed: ${response.status}` };
+        console.log(`[MCP] Calling tool "${toolName}" on ${serverUrl}`, JSON.stringify(args).slice(0, 200));
+        
+        // Try multiple formats - some MCP servers use different endpoints
+        const urlsToTry = [
+          serverUrl,
+          serverUrl.replace(/\/?$/, '/tools/call'),
+        ];
+        
+        let lastError: Error | null = null;
+        
+        // Prepare headers with optional API key
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json, text/event-stream, */*',
+          'User-Agent': 'ClawSync-MCP-Client/1.0',
+        };
+        
+        // Add API key if configured
+        if (apiKeyEnvVar) {
+          const apiKey = process.env[apiKeyEnvVar];
+          if (apiKey) {
+            headers['Authorization'] = `Bearer ${apiKey}`;
+            console.log(`[MCP] Using API key from ${apiKeyEnvVar}`);
+          } else {
+            console.warn(`[MCP] API key env var ${apiKeyEnvVar} not set`);
+          }
         }
+        
+        for (const url of urlsToTry) {
+          try {
+            const response = await fetch(url, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({
+                jsonrpc: '2.0',
+                method: 'tools/call',
+                params: {
+                  name: toolName,
+                  arguments: args,
+                },
+                id: 1,
+              }),
+            });
 
-        const data = await response.json();
-        return data.result || data;
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.log(`[MCP] ${url} returned ${response.status}:`, errorText.slice(0, 500));
+              lastError = new Error(`HTTP ${response.status}: ${errorText.slice(0, 200)}`);
+              continue;
+            }
+
+            const responseText = await response.text();
+            
+            // Parse response - handle both JSON and SSE formats
+            let data;
+            try {
+              // Try parsing as regular JSON first
+              data = JSON.parse(responseText);
+            } catch (e) {
+              // Might be SSE format - try to extract JSON from data: lines
+              const jsonMatch = responseText.match(/data: ({.+})/);
+              if (jsonMatch) {
+                try {
+                  data = JSON.parse(jsonMatch[1]);
+                } catch {
+                  console.error(`[MCP] Could not parse SSE response from ${url}:`, responseText.slice(0, 200));
+                  lastError = new Error('Invalid SSE format');
+                  continue;
+                }
+              } else {
+                console.error(`[MCP] ${url} returned non-JSON:`, responseText.slice(0, 200));
+                lastError = new Error('Non-JSON response');
+                continue;
+              }
+            }
+            
+            console.log(`[MCP] Response from ${url}:`, JSON.stringify(data).slice(0, 500));
+            
+            // Handle different response formats
+            if (data.result !== undefined) {
+              return data.result;
+            } else if (data.output !== undefined) {
+              return data.output;
+            } else if (data.content !== undefined) {
+              return data.content;
+            } else {
+              return data;
+            }
+          } catch (e) {
+            lastError = e instanceof Error ? e : new Error(String(e));
+            console.log(`[MCP] Failed to call ${url}:`, lastError.message);
+          }
+        }
+        
+        throw lastError || new Error('All MCP endpoints failed');
       } catch (error) {
-        return { error: error instanceof Error ? error.message : 'MCP tool call failed' };
+        const errorMsg = error instanceof Error ? error.message : 'MCP tool call failed';
+        console.error(`[MCP] Tool "${toolName}" failed:`, errorMsg);
+        return { error: errorMsg };
       }
     },
   });
@@ -282,5 +487,192 @@ async function logInvocation(
     securityCheckResult: securityResult.code,
     durationMs,
     timestamp: Date.now(),
+  });
+}
+
+/**
+ * Create tool to list available models
+ */
+function createListModelsTool(ctx: ActionCtx) {
+  return createTool({
+    description: 'List available AI models that can be switched to. Returns top 50 models. Use the "provider" parameter to filter by provider (e.g., "openai", "anthropic", "google"), or "search" to find specific models by name.',
+    args: jsonSchema<{ provider?: string; search?: string; limit?: number }>({
+      type: 'object' as const,
+      properties: {
+        provider: { 
+          type: 'string', 
+          description: 'Filter by provider. Examples: "openai", "anthropic", "google", "meta-llama", "deepseek", "x-ai"'
+        },
+        search: {
+          type: 'string',
+          description: 'Search for models by name. Examples: "gpt", "claude", "llama", "gemini"'
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum number of models to return (default: 50, max: 100)'
+        }
+      },
+    }),
+    handler: async (_toolCtx, args: { provider?: string; search?: string; limit?: number }) => {
+      const result = await ctx.runAction(internal.agent.modelSwitching.listAvailableModels, {
+        provider: args.provider,
+        search: args.search,
+        limit: args.limit,
+      });
+      return {
+        models: result.models,
+        count: result.count,
+        total: result.total,
+        message: `Showing ${result.count} of ${result.total} models:\n\n${result.models.map((m: any) => `- ${m.name} - ID: "${m.id}"`).join('\n')}\n\nTo switch models: use switch_model with provider="openrouter" and model="<ID>"`,
+      };
+    },
+  });
+}
+
+/**
+ * Create tool to switch models
+ */
+function createSwitchModelTool(ctx: ActionCtx) {
+  return createTool({
+    description: 'Switch to a different AI model. Use this when the user asks to change models, switch providers, or use a specific model like GPT-5, Claude 4, o3, etc. Available providers: openrouter (for 300+ models), anthropic, openai, xai.',
+    args: jsonSchema<{ provider: string; model: string }>({
+      type: 'object' as const,
+      properties: {
+        provider: {
+          type: 'string',
+          description: 'The provider to use. Options: openrouter (recommended for variety), anthropic, openai, xai'
+        },
+        model: {
+          type: 'string',
+          description: 'The model ID. Examples for openrouter: "openai/gpt-4.5", "openai/gpt-5", "openai/o3", "anthropic/claude-sonnet-4", "anthropic/claude-opus-4.5", "google/gemini-2.5-pro", "meta-llama/llama-4"'
+        },
+      },
+      required: ['provider', 'model'],
+    }),
+    handler: async (_toolCtx, { provider, model }: { provider: string; model: string }) => {
+      const result = await ctx.runAction(internal.agent.modelSwitching.switchModel, {
+        provider,
+        model,
+      });
+      return result;
+    },
+  });
+}
+
+/**
+ * Create tool to get current model info
+ */
+function createGetCurrentModelTool(ctx: ActionCtx) {
+  return createTool({
+    description: 'Get information about the currently active AI model. Use this when the user asks what model is being used.',
+    args: jsonSchema<{}>({
+      type: 'object' as const,
+      properties: {},
+    }),
+    handler: async () => {
+      const result = await ctx.runAction(internal.agent.modelSwitching.getCurrentModel, {});
+      return {
+        provider: result.provider,
+        model: result.model,
+        message: `Currently using: ${result.provider}/${result.model}`,
+      };
+    },
+  });
+}
+
+/**
+ * Create tool for generating images using OpenAI's DALL-E 3
+ */
+function createGenerateImageTool() {
+  return createTool({
+    description: 'Generate an image using AI. Provide a detailed prompt describing the image you want to create. Supports various sizes and quality levels.',
+    args: jsonSchema<{ prompt: string; size?: string; quality?: string }>({
+      type: 'object' as const,
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'A detailed description of the image you want to generate. Be specific about subjects, styles, lighting, mood, and composition.',
+        },
+        size: {
+          type: 'string',
+          description: 'Image size. Options: 1024x1024 (square, default), 1792x1024 (wide), 1024x1792 (tall)',
+          enum: ['1024x1024', '1792x1024', '1024x1792'],
+        },
+        quality: {
+          type: 'string',
+          description: 'Image quality. Options: standard (default, faster), hd (higher detail, slower)',
+          enum: ['standard', 'hd'],
+        },
+      },
+      required: ['prompt'],
+    }),
+    handler: async (_toolCtx, args: { prompt: string; size?: string; quality?: string }) => {
+      const apiKey = process.env.OPENAI_API_KEY;
+
+      if (!apiKey) {
+        return {
+          error: 'OPENAI_API_KEY environment variable is not configured. Please set it in the Convex dashboard to use image generation.',
+        };
+      }
+
+      const size = args.size || '1024x1024';
+      const quality = args.quality || 'standard';
+
+      try {
+        console.log(`[ImageGen] Generating image with size=${size}, quality=${quality}`);
+
+        const response = await fetch('https://api.openai.com/v1/images/generations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: 'dall-e-3',
+            prompt: args.prompt,
+            n: 1,
+            size: size,
+            quality: quality,
+            response_format: 'url',
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          const errorMessage = errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`;
+          console.error(`[ImageGen] API error: ${errorMessage}`);
+          return {
+            error: `Image generation failed: ${errorMessage}`,
+          };
+        }
+
+        const data = await response.json();
+
+        if (!data.data || !data.data[0] || !data.data[0].url) {
+          console.error('[ImageGen] Invalid response structure:', data);
+          return {
+            error: 'Image generation returned an invalid response. Please try again.',
+          };
+        }
+
+        const imageUrl = data.data[0].url;
+        const revisedPrompt = data.data[0].revised_prompt;
+
+        console.log(`[ImageGen] Successfully generated image`);
+
+        return {
+          success: true,
+          imageUrl: imageUrl,
+          revisedPrompt: revisedPrompt,
+          message: `Image generated successfully!\n\nURL: ${imageUrl}${revisedPrompt ? `\n\nRevised prompt: "${revisedPrompt}"` : ''}`,
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        console.error('[ImageGen] Error:', errorMessage);
+        return {
+          error: `Image generation failed: ${errorMessage}`,
+        };
+      }
+    },
   });
 }

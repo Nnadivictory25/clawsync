@@ -1,4 +1,4 @@
-import { query, mutation, internalMutation } from './_generated/server';
+import { query, internalQuery, mutation, internalMutation } from './_generated/server';
 import { v } from 'convex/values';
 
 /**
@@ -43,8 +43,8 @@ export const getByName = query({
   },
 });
 
-// Get server by ID
-export const getById = query({
+// Get server by ID (internal)
+export const getById = internalQuery({
   args: { id: v.id('mcpServers') },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.id);

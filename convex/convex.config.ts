@@ -7,7 +7,7 @@ import selfStaticHosting from '@convex-dev/self-static-hosting/convex.config.js'
 // import actionCache from '@convex-dev/action-cache/convex.config';
 // import rag from '@convex-dev/rag/convex.config';
 // import presence from '@convex-dev/presence/convex.config.js';
-// import textStreaming from '@convex-dev/persistent-text-streaming/convex.config';
+import textStreaming from '@convex-dev/persistent-text-streaming/convex.config';
 
 const app = defineApp();
 
@@ -23,6 +23,6 @@ app.use(selfStaticHosting);
 // app.use(actionCache);
 // app.use(rag);
 // app.use(presence);
-// app.use(textStreaming);
+app.use(textStreaming);
 
 export default app;

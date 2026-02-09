@@ -49,4 +49,11 @@ crons.interval(
   internal.apiUsage.cleanup
 );
 
+// Check and execute scheduled tasks every minute
+crons.interval(
+  'execute scheduled tasks',
+  { minutes: 1 },
+  internal.scheduledTasks.checkAndExecute
+);
+
 export default crons;

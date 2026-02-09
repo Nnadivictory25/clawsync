@@ -1,43 +1,77 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from 'convex/react';
-import { api } from '../../convex/_generated/api';
+import { useMutation } from 'convex/react';
 import { SyncBoardLayout } from '../components/syncboard/SyncBoardLayout';
-import { ClipboardText, Link as LinkIcon } from '@phosphor-icons/react';
+import { UploadSimple } from '@phosphor-icons/react';
+import { api } from '../../convex/_generated/api';
 
 export function SyncBoardSkillNew() {
   const navigate = useNavigate();
-  const templates = useQuery(api.skillTemplates.list);
-  const createSkill = useMutation(api.skillRegistry.create);
+  const createSkill = useMutation((api as any).skillRegistry.create);
 
-  const [skillType, setSkillType] = useState<'template' | 'webhook'>('template');
-  const [selectedTemplate, setSelectedTemplate] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [webhookUrl, setWebhookUrl] = useState('');
-  const [knowledgeText, setKnowledgeText] = useState('');
+  const [skillFileName, setSkillFileName] = useState('');
+  const [skillDoc, setSkillDoc] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState('');
 
-  const selectedTemplateData = templates?.find(
-    (t: { templateId: string }) => t.templateId === selectedTemplate
-  );
+  const parseSkillMarkdown = (text: string) => {
+    let frontmatter: Record<string, string> = {};
+    let body = text;
+
+    if (text.startsWith('---')) {
+      const endIndex = text.indexOf('\n---', 3);
+      if (endIndex !== -1) {
+        const fmBlock = text.slice(3, endIndex).trim();
+        body = text.slice(endIndex + 4).trim();
+        const lines = fmBlock.split('\n');
+        for (const line of lines) {
+          const colonIndex = line.indexOf(':');
+          if (colonIndex === -1) continue;
+          const key = line.slice(0, colonIndex).trim();
+          const value = line.slice(colonIndex + 1).trim();
+          if (key) frontmatter[key] = value;
+        }
+      }
+    }
+
+    return {
+      name: frontmatter.name || '',
+      description: frontmatter.description || '',
+      body,
+    };
+  };
+
+  const handleSkillFile = async (file: File | null) => {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.md')) {
+      setError('Please upload a .md skill file');
+      return;
+    }
+
+    const text = await file.text();
+    const parsed = parseSkillMarkdown(text);
+    if (!parsed.name || !parsed.description) {
+      setError('SKILL.md must include name and description in frontmatter');
+      return;
+    }
+
+    setName(parsed.name);
+    setDescription(parsed.description);
+    setSkillDoc(text.trim());
+    setSkillFileName(file.name);
+    setError('');
+  };
 
   const handleCreate = async () => {
-    // Use template description as fallback if user left it blank
-    const finalDescription = description || selectedTemplateData?.description || '';
-    if (!name || !finalDescription) {
+    if (!skillDoc) {
+      setError('Please upload a SKILL.md file');
+      return;
+    }
+
+    if (!name || !description) {
       setError('Name and description are required');
-      return;
-    }
-
-    if (skillType === 'template' && !selectedTemplate) {
-      setError('Please select a template');
-      return;
-    }
-
-    if (skillType === 'webhook' && !webhookUrl) {
-      setError('Webhook URL is required');
       return;
     }
 
@@ -45,19 +79,15 @@ export function SyncBoardSkillNew() {
     setError('');
 
     try {
-      let config: string | undefined;
-      if (skillType === 'webhook') {
-        config = JSON.stringify({ url: webhookUrl, method: 'POST' });
-      } else if (selectedTemplate === 'knowledge-lookup' && knowledgeText) {
-        config = JSON.stringify({ knowledge: knowledgeText });
-      }
-
       await createSkill({
         name,
-        description: finalDescription,
-        skillType,
-        templateId: skillType === 'template' ? selectedTemplate : undefined,
-        config,
+        description,
+        skillType: 'code',
+        uiMeta: JSON.stringify({
+          source: 'skill_md',
+          filename: skillFileName || 'SKILL.md',
+          markdown: skillDoc,
+        }),
       });
 
       navigate('/syncboard/skills');
@@ -71,28 +101,34 @@ export function SyncBoardSkillNew() {
   return (
     <SyncBoardLayout title="Add New Skill">
       <div className="skill-new-page">
-        <div className="skill-type-selector">
-          <button
-            className={`type-btn ${skillType === 'template' ? 'active' : ''}`}
-            onClick={() => setSkillType('template')}
-          >
-            <span className="type-icon"><ClipboardText size={32} weight="regular" /></span>
-            <span className="type-label">Template Skill</span>
-            <span className="type-desc">Use a pre-built template</span>
-          </button>
-          <button
-            className={`type-btn ${skillType === 'webhook' ? 'active' : ''}`}
-            onClick={() => setSkillType('webhook')}
-          >
-            <span className="type-icon"><LinkIcon size={32} weight="regular" /></span>
-            <span className="type-label">Webhook Skill</span>
-            <span className="type-desc">Call an external API</span>
-          </button>
+        <div className="skill-type-banner">
+          <span className="type-icon"><UploadSimple size={24} weight="regular" /></span>
+          <div>
+            <div className="type-label">Import Skill</div>
+            <div className="type-desc">Upload a SKILL.md file to define the skill.</div>
+          </div>
         </div>
 
         {error && <div className="error-message">{error}</div>}
 
         <div className="form-section">
+          <div className="form-group">
+            <label htmlFor="skill-file">Upload SKILL.md</label>
+            <input
+              id="skill-file"
+              type="file"
+              accept=".md"
+              className="input"
+              onChange={(e) => handleSkillFile(e.target.files?.[0] ?? null)}
+            />
+            <p className="hint">
+              Must include frontmatter with <code>name</code> and <code>description</code>.
+            </p>
+            {skillFileName && (
+              <p className="hint">Selected: <code>{skillFileName}</code></p>
+            )}
+          </div>
+
           <div className="form-group">
             <label htmlFor="name">Skill Name</label>
             <input
@@ -101,7 +137,7 @@ export function SyncBoardSkillNew() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="input"
-              placeholder="e.g., Weather Lookup"
+              placeholder="Skill name"
             />
           </div>
 
@@ -113,68 +149,21 @@ export function SyncBoardSkillNew() {
               onChange={(e) => setDescription(e.target.value)}
               className="input"
               rows={3}
-              placeholder={selectedTemplateData?.description || 'What does this skill do?'}
+              placeholder="What does this skill do?"
             />
-            {selectedTemplateData && !description && (
-              <p className="hint">
-                Leave blank to use the template default, or write a custom description for the agent.
-              </p>
-            )}
           </div>
 
-          {skillType === 'template' && (
+          {skillDoc && (
             <div className="form-group">
-              <label>Select Template</label>
-              <div className="template-grid">
-                {templates?.map((template: { templateId: string; name: string; description: string; category: string }) => (
-                  <button
-                    key={template.templateId}
-                    className={`template-card ${selectedTemplate === template.templateId ? 'selected' : ''}`}
-                    onClick={() => {
-                      setSelectedTemplate(template.templateId);
-                      if (!name) setName(template.name);
-                    }}
-                  >
-                    <span className="template-name">{template.name}</span>
-                    <span className="template-desc">{template.description}</span>
-                    <span className="template-category">{template.category}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {selectedTemplate === 'knowledge-lookup' && (
-            <div className="form-group">
-              <label htmlFor="knowledge-text">Knowledge Content</label>
+              <label htmlFor="skill-doc">Skill Document</label>
               <textarea
-                id="knowledge-text"
-                value={knowledgeText}
-                onChange={(e) => setKnowledgeText(e.target.value)}
+                id="skill-doc"
                 className="input"
-                rows={10}
-                placeholder="Paste your knowledge base content, guidelines, or reference material here..."
+                rows={8}
+                value={skillDoc}
+                onChange={(e) => setSkillDoc(e.target.value)}
               />
-              <p className="hint">
-                The agent will search this text when the skill is invoked.
-              </p>
-            </div>
-          )}
-
-          {skillType === 'webhook' && (
-            <div className="form-group">
-              <label htmlFor="webhook-url">Webhook URL</label>
-              <input
-                id="webhook-url"
-                type="url"
-                value={webhookUrl}
-                onChange={(e) => setWebhookUrl(e.target.value)}
-                className="input"
-                placeholder="https://api.example.com/webhook"
-              />
-              <p className="hint">
-                The agent will POST to this URL with the skill input.
-              </p>
+              <p className="hint">Stored with the skill for reference.</p>
             </div>
           )}
         </div>
@@ -201,37 +190,20 @@ export function SyncBoardSkillNew() {
           max-width: 700px;
         }
 
-        .skill-type-selector {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: var(--space-4);
-          margin-bottom: var(--space-6);
-        }
-
-        .type-btn {
+        .skill-type-banner {
           display: flex;
-          flex-direction: column;
           align-items: center;
-          gap: var(--space-2);
+          gap: var(--space-3);
           padding: var(--space-4);
-          background-color: var(--bg-secondary);
-          border: 2px solid var(--border);
+          margin-bottom: var(--space-6);
           border-radius: var(--radius-xl);
-          cursor: pointer;
-          transition: all var(--transition-fast);
-        }
-
-        .type-btn:hover {
-          border-color: var(--accent);
-        }
-
-        .type-btn.active {
-          border-color: var(--interactive);
-          background-color: var(--surface);
+          background-color: var(--bg-secondary);
+          border: 1px solid var(--border);
         }
 
         .type-icon {
           color: var(--interactive);
+          display: inline-flex;
         }
 
         .type-label {
@@ -276,47 +248,6 @@ export function SyncBoardSkillNew() {
           font-size: var(--text-sm);
           color: var(--text-secondary);
           margin-top: var(--space-1);
-        }
-
-        .template-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-          gap: var(--space-3);
-        }
-
-        .template-card {
-          display: flex;
-          flex-direction: column;
-          gap: var(--space-1);
-          padding: var(--space-3);
-          background-color: var(--bg-primary);
-          border: 2px solid var(--border);
-          border-radius: var(--radius-lg);
-          cursor: pointer;
-          text-align: left;
-          transition: all var(--transition-fast);
-        }
-
-        .template-card:hover {
-          border-color: var(--accent);
-        }
-
-        .template-card.selected {
-          border-color: var(--interactive);
-        }
-
-        .template-name {
-          font-weight: 500;
-        }
-
-        .template-desc {
-          font-size: var(--text-xs);
-          color: var(--text-secondary);
-        }
-
-        .template-category {
-          font-size: var(--text-xs);
-          color: var(--interactive);
         }
 
         .form-actions {

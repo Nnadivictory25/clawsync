@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { SyncBoardLayout } from '../components/syncboard/SyncBoardLayout';
@@ -22,12 +22,14 @@ export function SyncBoardAgentMail() {
   const removeInbox = useMutation(api.agentMail.removeInbox);
   const createInbox = useAction(api.agentMail.createInbox);
   const deleteInboxApi = useAction(api.agentMail.deleteInbox);
+  const syncInboxes = useAction(api.agentMail.syncInboxes);
 
   const [isCreating, setIsCreating] = useState(false);
   const [newInboxName, setNewInboxName] = useState('');
   const [newInboxUsername, setNewInboxUsername] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   // Handle creating new inbox
   const handleCreateInbox = async () => {
@@ -68,6 +70,28 @@ export function SyncBoardAgentMail() {
       setIsLoading(false);
     }
   };
+
+  // Handle syncing inboxes from AgentMail API
+  const handleSyncInboxes = async () => {
+    setIsLoading(true);
+    setSyncMessage(null);
+    try {
+      const result = await syncInboxes({});
+      setSyncMessage(`Synced ${result.synced} of ${result.total} inboxes`);
+      setTimeout(() => setSyncMessage(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to sync inboxes');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Auto-sync when component mounts and no inboxes are loaded
+  useEffect(() => {
+    if (config?.enabled && inboxes !== undefined && inboxes.length === 0 && !isLoading) {
+      handleSyncInboxes();
+    }
+  }, [config?.enabled, inboxes]);
 
   // Handle config updates
   const handleConfigUpdate = async (updates: Partial<{
@@ -258,7 +282,21 @@ export function SyncBoardAgentMail() {
               ) : (
                 <div className="empty-state">
                   <EnvelopeSimple size={48} weight="light" />
-                  <p>No inboxes yet. Create one to get started.</p>
+                  <p>No inboxes yet. Create one or sync from AgentMail.</p>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleSyncInboxes}
+                    disabled={isLoading}
+                    style={{ marginTop: '12px' }}
+                  >
+                    <ArrowsClockwise size={16} style={{ marginRight: '6px' }} />
+                    {isLoading ? 'Syncing...' : 'Sync from AgentMail'}
+                  </button>
+                  {syncMessage && (
+                    <p style={{ marginTop: '8px', color: 'var(--success)', fontSize: '14px' }}>
+                      {syncMessage}
+                    </p>
+                  )}
                 </div>
               )}
             </div>

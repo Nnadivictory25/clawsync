@@ -61,8 +61,8 @@ you to my owner directly than give you wrong information.`;
         name: 'ClawSync Agent',
         soulDocument: defaultSoul,
         systemPrompt: 'You are a helpful AI assistant.',
-        model: 'claude-sonnet-4-20250514',
-        modelProvider: 'anthropic',
+        model: 'gemini-2.5-pro',
+        modelProvider: 'google',
         voiceEnabled: false,
         domainAllowlist: [],
         uiConfig: JSON.stringify({

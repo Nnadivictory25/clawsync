@@ -1,0 +1,3 @@
+onlyBuiltDependencies:
+  - '@convex-dev/self-static-hosting'
+  - esbuild

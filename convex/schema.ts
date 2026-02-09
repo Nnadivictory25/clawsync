@@ -383,4 +383,80 @@ export default defineSchema({
     .index('by_tweetId', ['tweetId'])
     .index('by_showOnLanding', ['showOnLanding', 'postedAt'])
     .index('by_postedAt', ['postedAt']),
+
+  // File uploads for multimodal chat
+  fileUploads: defineTable({
+    uploadToken: v.string(), // Upload token from generateUploadUrl
+    storageId: v.optional(v.id('_storage')), // Actual storage ID after upload complete
+    fileType: v.string(), // MIME type
+    fileName: v.optional(v.string()),
+    status: v.union(v.literal('pending'), v.literal('complete')),
+    uploadedAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index('by_token', ['uploadToken'])
+    .index('by_storage', ['storageId'])
+    .index('by_status', ['status']),
+
+  // Telegram chat sessions for conversation history
+  telegramSessions: defineTable({
+    chatId: v.string(),
+    threadId: v.string(),
+    username: v.optional(v.string()),
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_chatId', ['chatId']),
+
+  // Generated files (PDFs, images, etc.)
+  generatedFiles: defineTable({
+    storageId: v.id('_storage'),
+    filename: v.string(),
+    contentType: v.string(),
+    createdAt: v.number(),
+  })
+    .index('by_storage', ['storageId'])
+    .index('by_createdAt', ['createdAt']),
+
+  // Scheduled tasks for automated AI workflows
+  scheduledTasks: defineTable({
+    name: v.string(),
+    description: v.string(),
+    prompt: v.string(), // The AI prompt to run
+    schedule: v.object({
+      type: v.union(v.literal('daily'), v.literal('weekly'), v.literal('interval')),
+      time: v.optional(v.string()), // "09:00" for daily/weekly
+      dayOfWeek: v.optional(v.number()), // 0-6 for weekly (0=Sunday)
+      intervalMinutes: v.optional(v.number()), // for interval type
+    }),
+    enabled: v.boolean(),
+    lastRunAt: v.optional(v.number()),
+    nextRunAt: v.number(),
+    runCount: v.number(),
+    createdAt: v.number(),
+  })
+    .index('by_nextRun', ['nextRunAt', 'enabled'])
+    .index('by_enabled', ['enabled']),
+
+  // Schedule run history
+  scheduleRuns: defineTable({
+    taskId: v.id('scheduledTasks'),
+    runAt: v.number(),
+    success: v.boolean(),
+    result: v.optional(v.string()),
+  })
+    .index('by_task', ['taskId'])
+    .index('by_runAt', ['runAt']),
+
+  // User preferences (for single user setup)
+  userPreferences: defineTable({
+    email: v.optional(v.string()), // User's email for sending reports/updates
+    telegramChatId: v.optional(v.string()), // Telegram chat ID
+    defaultModel: v.optional(v.string()), // Preferred AI model
+    timezone: v.optional(v.string()), // User's timezone
+    updatedAt: v.number(),
+  })
+    .index('by_email', ['email']),
 });

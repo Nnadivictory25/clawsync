@@ -7,6 +7,9 @@ import { clawsyncAgent, createDynamicAgent } from './agent/clawsync';
 import { rateLimiter } from './rateLimits';
 import { loadTools } from './agent/toolLoader';
 import { stepCountIs } from '@convex-dev/agent';
+import { generateText as aiGenerateText } from 'ai';
+import { openai } from '@ai-sdk/openai';
+import { extractTextFromPDF, isPDFFile } from './utils/pdfExtractor';
 
 /**
  * Chat Functions
@@ -22,6 +25,12 @@ export const send = action({
     threadId: v.optional(v.string()),
     message: v.string(),
     sessionId: v.string(),
+    attachments: v.optional(v.array(v.object({
+      uploadToken: v.string(),
+      url: v.string(),
+      fileName: v.string(),
+      fileType: v.string(),
+    }))),
   },
   returns: v.object({
     response: v.optional(v.string()),
@@ -89,14 +98,96 @@ export const send = action({
       // Load tools from skill registry + MCP servers
       const tools = await loadTools(ctx);
 
+      // Prepare message content (multimodal if attachments present)
+      const hasAttachments = args.attachments && args.attachments.length > 0;
+      const isImageFile = (fileType: string) => fileType.startsWith('image/');
+      
+      // Build multimodal content if attachments are present
+      let prompt: string | any[] = args.message;
+      let metadata: Record<string, string> | undefined;
+      
+      if (hasAttachments) {
+        // Store attachments in message metadata
+        metadata = {
+          attachments: JSON.stringify(args.attachments),
+        };
+        
+        // Extract text from PDFs
+        let pdfTexts: string[] = [];
+        for (const attachment of args.attachments!) {
+          if (isPDFFile(attachment.fileType)) {
+            try {
+              console.log('Extracting text from PDF:', attachment.fileName);
+              // Fetch PDF content
+              const pdfResponse = await fetch(attachment.url);
+              if (pdfResponse.ok) {
+                const pdfBuffer = await pdfResponse.arrayBuffer();
+                const pdfText = await extractTextFromPDF(pdfBuffer);
+                pdfTexts.push(`--- PDF: ${attachment.fileName} ---\n${pdfText.substring(0, 50000)}`); // Limit to 50k chars
+                console.log('PDF text extracted, length:', pdfText.length);
+              }
+            } catch (error) {
+              console.error('Error processing PDF:', error);
+              pdfTexts.push(`--- PDF: ${attachment.fileName} ---\n[Error: Could not extract text]`);
+            }
+          }
+        }
+        
+        // Add PDF content to prompt
+        if (pdfTexts.length > 0) {
+          prompt = `User uploaded ${pdfTexts.length} PDF document(s). Here is the extracted text:\n\n${pdfTexts.join('\n\n')}\n\nUser's question: ${args.message}`;
+        }
+        
+        // For multimodal LLMs, we need to format the content properly
+        // Check if the model supports vision by looking at model config
+        const modelConfig = await ctx.runQuery(internal.agentConfig.getConfig);
+        const supportsVision = modelConfig?.model?.includes('vision') || 
+                              modelConfig?.model?.includes('claude-4') ||
+                              modelConfig?.model?.includes('claude-opus') ||
+                              modelConfig?.model?.includes('claude-sonnet') ||
+                              modelConfig?.model?.includes('gpt-4.5') ||
+                              modelConfig?.model?.includes('gpt-5') ||
+                              modelConfig?.model?.includes('gpt-4o') ||
+                              modelConfig?.model?.includes('o3') ||
+                              modelConfig?.model?.includes('o4');
+        
+        if (supportsVision) {
+          // Build multimodal content array for vision models
+          const content: any[] = [];
+          
+          // Add text message with PDF content if any
+          let messageText = args.message;
+          if (pdfTexts.length > 0) {
+            messageText = `User uploaded ${pdfTexts.length} PDF document(s). Here is the extracted text:\n\n${pdfTexts.join('\n\n')}\n\nUser's question: ${args.message}`;
+          }
+          
+          if (messageText.trim()) {
+            content.push({ type: 'text', text: messageText });
+          }
+          
+          // Add image attachments
+          for (const attachment of args.attachments!) {
+            if (isImageFile(attachment.fileType)) {
+              content.push({
+                type: 'image',
+                image: attachment.url,
+              });
+            }
+          }
+          
+          prompt = content;
+        }
+      }
+
       // Generate response with tools and multi-step support
       const hasTools = Object.keys(tools).length > 0;
       const result = await thread.generateText(
         {
-          prompt: args.message,
+          prompt,
           ...(system && { system }),
           ...(hasTools && { tools }),
           ...(hasTools && { stopWhen: stepCountIs(5) }),
+          ...(metadata && { metadata }),
         },
         {
           // Save all messages (including tool call steps) so the
@@ -106,9 +197,13 @@ export const send = action({
       );
 
       // Log activity
+      const logSummary = hasAttachments 
+        ? `Responded to: "${args.message.slice(0, 50)}${args.message.length > 50 ? '...' : ''}" with ${args.attachments!.length} attachment(s)`
+        : `Responded to: "${args.message.slice(0, 50)}${args.message.length > 50 ? '...' : ''}"`;
+      
       await ctx.runMutation(internal.activityLog.log, {
         actionType: 'chat_message',
-        summary: `Responded to: "${args.message.slice(0, 50)}${args.message.length > 50 ? '...' : ''}"`,
+        summary: logSummary,
         visibility: 'private',
       });
 
@@ -227,6 +322,7 @@ export const apiSend = internalAction({
     threadId: v.optional(v.string()),
     sessionId: v.string(),
     apiKeyId: v.optional(v.id('apiKeys')),
+    imageUrl: v.optional(v.string()),
   },
   returns: v.object({
     response: v.optional(v.string()),
@@ -247,29 +343,123 @@ export const apiSend = internalAction({
     }
 
     try {
+      // Validate message is a string
+      const message = String(args.message || '');
+
       // Use dynamic agent for SyncBoard-configured model + tools
+      console.log('Creating dynamic agent...');
       const agent = await createDynamicAgent(ctx);
+      console.log('Agent created successfully');
 
       // Create or continue thread
       let threadId = args.threadId;
       let thread;
       if (threadId) {
+        console.log('Continuing existing thread:', threadId);
         ({ thread } = await agent.continueThread(ctx, { threadId }));
       } else {
+        console.log('Creating new thread');
         const created = await agent.createThread(ctx, {});
         threadId = created.threadId;
         thread = created.thread;
+        console.log('New thread created:', threadId);
       }
 
-      // Generate response
-      const result = await thread.generateText({
-        prompt: args.message,
-      });
+      // Load tools and config for multi-step generation
+      const tools = await loadTools(ctx);
+      const config = await ctx.runQuery(internal.agentConfig.getConfig);
+      const system = config
+        ? `${config.soulDocument}\n\n${config.systemPrompt}`
+        : undefined;
+
+      // Generate response with tools and multi-step support
+      console.log('Generating response for message:', message);
+      const hasTools = Object.keys(tools).length > 0;
+      
+      let result;
+      
+      // If image URL provided, make direct API call for vision
+      if (args.imageUrl) {
+        try {
+          console.log('Downloading image from:', args.imageUrl);
+          const imageResponse = await fetch(args.imageUrl);
+          if (imageResponse.ok) {
+            const imageBuffer = await imageResponse.arrayBuffer();
+            const base64Image = Buffer.from(imageBuffer).toString('base64');
+            const mimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
+            
+            console.log('Image downloaded, making vision API call with AI SDK');
+            
+            // Use Vercel AI SDK for vision
+            const modelId = config?.model || 'gpt-4o';
+            const visionModel = openai(modelId);
+            
+            const { text } = await aiGenerateText({
+              model: visionModel,
+              messages: [
+                ...(system ? [{ role: 'system' as const, content: system }] : []),
+                {
+                  role: 'user' as const,
+                  content: [
+                    { type: 'text', text: message },
+                    {
+                      type: 'image',
+                      image: `data:${mimeType};base64,${base64Image}`,
+                    },
+                  ],
+                },
+              ],
+            });
+            
+            // Create a result object that matches the expected format
+            result = {
+              text: text,
+              usage: {
+                promptTokens: 0,
+                completionTokens: 0,
+              },
+            };
+            
+            console.log('Vision analysis complete');
+          } else {
+            throw new Error(`Failed to download image: ${imageResponse.status}`);
+          }
+        } catch (error) {
+          console.error('Vision analysis error:', error);
+          // Fall back to regular text processing
+          result = await thread.generateText(
+            {
+              prompt: `${message}\n\n[Note: An image was provided but could not be analyzed. Error: ${error instanceof Error ? error.message : 'Unknown error'}]`,
+              ...(system && { system }),
+              ...(hasTools && { tools }),
+              ...(hasTools && { stopWhen: stepCountIs(5) }),
+            },
+            {
+              storageOptions: { saveMessages: 'all' },
+            }
+          );
+        }
+      } else {
+        // Regular text-only request
+        result = await thread.generateText(
+          {
+            prompt: message,
+            ...(system && { system }),
+            ...(hasTools && { tools }),
+            ...(hasTools && { stopWhen: stepCountIs(5) }),
+          },
+          {
+            storageOptions: { saveMessages: 'all' },
+          }
+        );
+      }
+      console.log('Response generated successfully');
 
       // Log activity
+      const summary = message.length > 50 ? message.slice(0, 50) + '...' : message;
       await ctx.runMutation(internal.activityLog.log, {
         actionType: 'api_chat',
-        summary: `API: "${args.message.slice(0, 50)}${args.message.length > 50 ? '...' : ''}"`,
+        summary: `API: "${summary}"`,
         visibility: 'private',
         channel: 'api',
       });
@@ -279,8 +469,26 @@ export const apiSend = internalAction({
         | { promptTokens?: number; completionTokens?: number }
         | undefined;
 
+      // Handle different response formats safely
+      let responseText = '';
+      
+      try {
+        // Try to get text from result
+        if (typeof result.text === 'string') {
+          responseText = result.text;
+        } else if (result && typeof result === 'object') {
+          const resultObj = result as Record<string, unknown>;
+          responseText = String(resultObj.text || resultObj.content || resultObj.message || resultObj.response || '');
+        }
+      } catch (e) {
+        console.error('Error extracting response text:', e);
+        responseText = '';
+      }
+
+      console.log('Extracted response text length:', responseText.length);
+
       return {
-        response: result.text,
+        response: responseText,
         threadId,
         tokensUsed: (usage?.promptTokens ?? 0) + (usage?.completionTokens ?? 0),
         inputTokens: usage?.promptTokens ?? 0,

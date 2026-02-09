@@ -21,6 +21,7 @@ import { SyncBoardConfig } from './pages/SyncBoardConfig';
 import { SyncBoardApi } from './pages/SyncBoardApi';
 import { SyncBoardX } from './pages/SyncBoardX';
 import { SyncBoardAgentMail } from './pages/SyncBoardAgentMail';
+import { SyncBoardTools } from './pages/SyncBoardTools';
 
 // Wrapper component to check if setup is required
 function SetupGuard({ children }: { children: React.ReactNode }) {
@@ -189,6 +190,7 @@ export function App() {
           <Route path="/syncboard/api" element={<SyncBoardAuthGuard><SyncBoardApi /></SyncBoardAuthGuard>} />
           <Route path="/syncboard/x" element={<SyncBoardAuthGuard><SyncBoardX /></SyncBoardAuthGuard>} />
           <Route path="/syncboard/agentmail" element={<SyncBoardAuthGuard><SyncBoardAgentMail /></SyncBoardAuthGuard>} />
+          <Route path="/syncboard/tools" element={<SyncBoardAuthGuard><SyncBoardTools /></SyncBoardAuthGuard>} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/chat" replace />} />

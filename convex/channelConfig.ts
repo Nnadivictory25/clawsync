@@ -92,6 +92,29 @@ export const toggle = mutation({
   },
 });
 
+// Update channel config
+export const update = mutation({
+  args: {
+    id: v.id('channelConfig'),
+    updates: v.object({
+      displayName: v.optional(v.string()),
+      enabled: v.optional(v.boolean()),
+      rateLimitPerMinute: v.optional(v.number()),
+      webhookUrl: v.optional(v.string()),
+      metadata: v.optional(v.string()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const channel = await ctx.db.get(args.id);
+    if (!channel) throw new Error('Channel not found');
+
+    await ctx.db.patch(args.id, {
+      ...args.updates,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
 // Delete channel config
 export const remove = mutation({
   args: { id: v.id('channelConfig') },

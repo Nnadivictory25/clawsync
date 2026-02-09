@@ -164,14 +164,38 @@ export const postTweet = action({
 
     if (!response.ok) {
       const error = await response.text();
+      const errorData = JSON.parse(error);
+      
+      if (errorData.status === 403 && errorData.detail?.includes('oauth1 app permissions')) {
+        throw new Error(`X API Error: Your Access Token doesn't have write permissions. 
+
+To fix this:
+1. Go to https://developer.x.com/en/portal/dashboard
+2. Find your app → Keys and Tokens
+3. Regenerate Access Token & Secret
+4. CHECK THE BOX for "Read and Write" permissions
+5. Update X_ACCESS_TOKEN and X_ACCESS_TOKEN_SECRET in Convex Dashboard
+
+Current error: ${error}`);
+      }
+      
       throw new Error(`Failed to post tweet: ${error}`);
     }
 
     const result = await response.json();
+    console.log('[X/Twitter] Post tweet response:', JSON.stringify(result, null, 2));
+
+    // X API v2 returns { data: { id: string, text: string } }
+    const tweetId = result.data?.id || result.id;
+    
+    if (!tweetId) {
+      console.error('[X/Twitter] No tweet ID in response:', result);
+      throw new Error('Tweet posted but no ID returned in response');
+    }
 
     // Cache the tweet
     await ctx.runMutation(internal.xTwitter.cacheTweet, {
-      tweetId: result.data.id,
+      tweetId: tweetId,
       text: args.text,
       authorUsername: config.username || 'agent',
       isAgentTweet: true,
@@ -189,7 +213,7 @@ export const postTweet = action({
       visibility: 'public',
     });
 
-    return result.data;
+    return { id: tweetId, text: args.text };
   },
 });
 
@@ -353,14 +377,14 @@ async function makeOAuthRequest(
     accessTokenSecret: string;
   }
 ): Promise<Response> {
-  // In production, use a proper OAuth 1.0a library like oauth-1.0a
-  // This is a placeholder that shows the structure
-
+  // OAuth 1.0a implementation using Web Crypto API
   const timestamp = Math.floor(Date.now() / 1000).toString();
-  const nonce = Math.random().toString(36).substring(2);
+  const nonce = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
 
-  // OAuth parameters
-  const oauthParams = {
+  // Create signature base string
+  const oauthParams: Record<string, string> = {
     oauth_consumer_key: credentials.apiKey,
     oauth_nonce: nonce,
     oauth_signature_method: 'HMAC-SHA1',
@@ -369,12 +393,42 @@ async function makeOAuthRequest(
     oauth_version: '1.0',
   };
 
-  // Generate signature (simplified - use oauth-1.0a library in production)
-  // This requires proper HMAC-SHA1 signing which is complex
-  // For now, we'll use a placeholder that indicates this needs proper implementation
-  const signature = 'PLACEHOLDER_SIGNATURE';
+  // Sort parameters alphabetically
+  const sortedParams = Object.keys(oauthParams)
+    .sort()
+    .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(oauthParams[key])}`)
+    .join('&');
 
-  const authHeader = `OAuth oauth_consumer_key="${oauthParams.oauth_consumer_key}", oauth_nonce="${oauthParams.oauth_nonce}", oauth_signature="${encodeURIComponent(signature)}", oauth_signature_method="HMAC-SHA1", oauth_timestamp="${oauthParams.oauth_timestamp}", oauth_token="${oauthParams.oauth_token}", oauth_version="1.0"`;
+  const signatureBaseString = [
+    method.toUpperCase(),
+    encodeURIComponent(url),
+    encodeURIComponent(sortedParams),
+  ].join('&');
+
+  // Create signing key
+  const signingKey = `${encodeURIComponent(credentials.apiSecret)}&${encodeURIComponent(credentials.accessTokenSecret)}`;
+
+  // Generate HMAC-SHA1 signature
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(signingKey);
+  const messageData = encoder.encode(signatureBaseString);
+  
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-1' },
+    false,
+    ['sign']
+  );
+  
+  const signatureBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
+  const signature = btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)));
+
+  // Build Authorization header
+  const authHeader = `OAuth ${Object.keys(oauthParams)
+    .sort()
+    .map(key => `${encodeURIComponent(key)}="${encodeURIComponent(oauthParams[key])}"`)
+    .join(', ')}, oauth_signature="${encodeURIComponent(signature)}"`;
 
   return fetch(url, {
     method,

@@ -10,11 +10,12 @@ import {
   Plug,
   DeviceMobile,
   XLogo,
+  EnvelopeSimple,
   Key,
   ChatCircle,
   ClipboardText,
   Gear,
-  EnvelopeSimple,
+  Toolbox,
 } from '@phosphor-icons/react';
 import './SyncBoardLayout.css';
 
@@ -23,6 +24,7 @@ const navItems = [
   { path: '/syncboard/soul', label: 'Soul Document', Icon: Brain },
   { path: '/syncboard/models', label: 'Models', Icon: Robot },
   { path: '/syncboard/skills', label: 'Skills', Icon: Lightning },
+  { path: '/syncboard/tools', label: 'Tools', Icon: Toolbox },
   { path: '/syncboard/mcp', label: 'MCP Servers', Icon: Plug },
   { path: '/syncboard/channels', label: 'Channels', Icon: DeviceMobile },
   { path: '/syncboard/x', label: 'X (Twitter)', Icon: XLogo },
