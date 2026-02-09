@@ -149,7 +149,9 @@ export const send = action({
                               modelConfig?.model?.includes('gpt-5') ||
                               modelConfig?.model?.includes('gpt-4o') ||
                               modelConfig?.model?.includes('o3') ||
-                              modelConfig?.model?.includes('o4');
+                              modelConfig?.model?.includes('o4') ||
+                              modelConfig?.model?.includes('gemini') ||
+                              modelConfig?.model?.includes('flash');
         
         if (supportsVision) {
           // Build multimodal content array for vision models
