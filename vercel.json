@@ -1,0 +1,4 @@
+{
+  "buildCommand": "npx convex dev --once && pnpm run build",
+  "outputDirectory": "dist"
+}
