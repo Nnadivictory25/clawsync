@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:convex": "npx convex dev --typecheck=disable",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
