@@ -23,10 +23,22 @@ Supports:
 - Request body for POST requests (JSON, form data, etc.)
 - Query parameters
 
-IMPORTANT: 
+IMPORTANT TIPS FOR FETCHING WEBSITES:
+Many websites (like Reddit, news sites, etc.) block requests without proper browser headers.
+When fetching from websites (not APIs), ALWAYS include these headers:
+{
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+  "Accept-Encoding": "gzip, deflate, br",
+  "Referer": "https://www.google.com/"
+}
+
+OTHER IMPORTANT NOTES:
 - Response body is limited to 100KB to prevent memory issues
 - URL must be accessible (no redirects allowed for security)
-- Only HTTP/HTTPS URLs are supported`,
+- Only HTTP/HTTPS URLs are supported
+- For Reddit JSON endpoints, use .json extension (e.g., reddit.com/r/subreddit.json)`,
     args: jsonSchema<{
       url: string;
       method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
