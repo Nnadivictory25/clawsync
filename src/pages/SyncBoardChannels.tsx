@@ -872,7 +872,7 @@ export function SyncBoardChannels() {
         )}
 
         <div className="channels-grid">
-          {channels?.map((channel: { _id: string; channelType: string; displayName: string; enabled: boolean; rateLimitPerMinute: number; webhookUrl?: string }) => {
+          {channels?.map((channel) => {
             const info = channelInfo[channel.channelType] || {
               icon: <LinkIcon size={32} weight="regular" />,
               description: 'Custom channel',

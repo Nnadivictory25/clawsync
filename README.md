@@ -5,40 +5,36 @@
 <h1 align="center">ClawSync</h1>
 
 <p align="center">
-  Open source AI agent platform built with React + Convex.<br>
-  Deploy your personal AI agent with chat UI, skills system, MCP support, and multi-model routing.
+OpenClaw for the cloud.
+Deploy an open source personal AI agent with chat UI, skills system, MCP support, and multi-model routing. Built on Convex.
 </p>
 
 <p align="center">
   <em>Inspired by <a href="https://openclaw.ai/">OpenClaw.ai</a></em>
 </p>
 
-## ClawSync Challenge
-
-**Win $500 + Swag + API Credits**
-
-Be one of the first three to deploy ClawSync and show it off. Post a live demo on X demonstrating at least three agent features.
-
-**Prizes:** $500 cash/gift card, swag, API credits
-
-**Requirements:**
-- Post a live demo video on X showing your deployed ClawSync agent
-- Demonstrate at least 3 different agent features (chat, skills, MCP, channels, X integration, etc.)
-- SyncBoard admin dashboard and Live Activity Feed do not count as features
-- Tag **@convex** and use **#ClawSyncChallenge**
-- First 3 valid submissions win
-
 ## Features
 
-- **Public Chat UI** - Clean, real-time chat with streaming responses
-- **SyncBoard Admin** - Private dashboard to manage your agent
-- **Skills System** - Template, webhook, or code-based skills
-- **Multi-Model** - Claude, GPT, Grok, Gemini, or any OpenRouter model
-- **MCP Support** - Connect to MCP servers or expose your agent as one
+- **Multi-Agent System** - Run multiple agents simultaneously, each with independent config, skills, MCP servers, and memory
+- **Shared Soul Documents** - Define reusable agent personalities that can power one or many agents
+- **Agent Controls** - Auto-run, pause, restart, single task, or think-to-continue modes per agent
+- **Agent-to-Agent Interaction** - Agents can communicate and delegate tasks to each other
+- **Public Chat UI** - Clean, real-time chat with streaming responses and agent selector
+- **SyncBoard Admin** - Private dashboard to manage agents, souls, skills, and integrations
+- **Skills System** - Template, webhook, or code-based skills with a marketplace for external registries
+- **Multi-Model** - Claude, GPT, Grok, Gemini, or any OpenRouter model (configurable per agent)
+- **MCP Support** - Connect to MCP servers or expose your agent as one (assignable per agent)
 - **Channel Integrations** - Telegram, Discord, WhatsApp, Slack, Email
 - **X (Twitter) Integration** - Read, reply, and post tweets from your agent
 - **AgentMail** - Email inboxes for your agent with rate limits
-- **Live Activity Feed** - Public real-time log of agent actions
+- **File Storage** - Upload and manage files with Convex native storage or Cloudflare R2
+- **Browser Automation** - Extract data, act, or run autonomous agents on any URL via Stagehand
+- **Web Scraping** - Scrape any URL to markdown with durable caching via Firecrawl
+- **AI Analytics** - Weekly or manual deep analysis of metrics with anomaly detection and recommendations
+- **Agent Research** - Competitive, topic, and real-time X research with external API sources
+- **Persistent Memory** - Supermemory integration for long-term recall across conversations
+- **Live Activity Feed** - Public real-time log of agent actions with per-agent filtering
+- **Unified Agent Feed** - Combined activity view across all agents with filter chips
 
 ## Quick Start
 
@@ -76,10 +72,24 @@ ANTHROPIC_API_KEY=sk-ant-...
 ```
 
 Optional for multi-model support:
+
 ```
 OPENAI_API_KEY=sk-...
 XAI_API_KEY=xai-...
 OPENROUTER_API_KEY=sk-or-...
+```
+
+Optional for SyncBoard features (each feature activates when its key is set):
+
+```
+FIRECRAWL_API_KEY=...              # Web scraping
+BROWSERBASE_API_KEY=...            # Stagehand browser automation
+BROWSERBASE_PROJECT_ID=...         # Stagehand browser automation
+SUPERMEMORY_API_KEY=...            # Persistent agent memory
+R2_ACCOUNT_ID=...                  # Cloudflare R2 file storage
+R2_ACCESS_KEY_ID=...               # Cloudflare R2 file storage
+R2_SECRET_ACCESS_KEY=...           # Cloudflare R2 file storage
+R2_BUCKET_NAME=...                 # Cloudflare R2 file storage
 ```
 
 4. **Start the frontend:**
@@ -114,10 +124,10 @@ Your app will be available at `https://your-project.convex.site`.
 
 ### Deployment Options
 
-| Mode | Description | Best For |
-|------|-------------|----------|
-| Convex Storage | Files in Convex, served via HTTP | Simple apps, development |
-| Convex + Cloudflare CDN | Files in Convex, cached at edge | Custom domains, production |
+| Mode                    | Description                      | Best For                   |
+| ----------------------- | -------------------------------- | -------------------------- |
+| Convex Storage          | Files in Convex, served via HTTP | Simple apps, development   |
+| Convex + Cloudflare CDN | Files in Convex, cached at edge  | Custom domains, production |
 
 See [@convex-dev/self-static-hosting](https://github.com/get-convex/self-static-hosting) for advanced options.
 
@@ -128,6 +138,7 @@ See [@convex-dev/self-static-hosting](https://github.com/get-convex/self-static-
 Protect your admin dashboard with a password:
 
 1. Generate a password hash:
+
 ```bash
 node -e "console.log(require('crypto').createHash('sha256').update('your-password').digest('hex'))"
 ```
@@ -190,9 +201,9 @@ ClawSync supports xAI's Grok models alongside Claude, GPT, and others.
 
 ### Available Models
 
-| Model | Description |
-|-------|-------------|
-| grok-3 | xAI flagship model |
+| Model       | Description                        |
+| ----------- | ---------------------------------- |
+| grok-3      | xAI flagship model                 |
 | grok-3-fast | Fast variant for quicker responses |
 
 ## Project Structure
@@ -201,25 +212,61 @@ ClawSync supports xAI's Grok models alongside Claude, GPT, and others.
 clawsync/
 ├── convex/                    # Convex backend
 │   ├── agent/                 # Agent core
-│   │   ├── clawsync.ts       # Agent definition
+│   │   ├── clawsync.ts       # Agent definition with multi-agent factory
 │   │   ├── security.ts       # Security checker
-│   │   ├── toolLoader.ts     # Dynamic tool loading
-│   │   └── modelRouter.ts    # Multi-model routing
+│   │   ├── toolLoader.ts     # Per-agent tool loading with ask_agent tools
+│   │   └── modelRouter.ts    # Per-agent model routing
+│   ├── agents.ts              # Multi-agent CRUD
+│   ├── souls.ts               # Shared soul document CRUD
+│   ├── agentAssignments.ts    # Per-agent skill/MCP assignments
+│   ├── agentInteractions.ts   # Agent-to-agent interaction log
 │   ├── auth.config.ts         # WorkOS config (placeholder)
 │   ├── xTwitter.ts            # X/Twitter integration
 │   ├── staticHosting.ts       # Self-static-hosting API
+│   ├── media.ts               # Convex native file storage
+│   ├── r2Storage.ts           # Cloudflare R2 storage (optional)
+│   ├── stagehand.ts           # Stagehand job storage
+│   ├── stagehandActions.ts    # Browser automation actions
+│   ├── firecrawl.ts           # Web scraping via Firecrawl
+│   ├── analytics.ts           # Metrics snapshot aggregation
+│   ├── analyticsReport.ts     # AI analytics report CRUD
+│   ├── analyticsReportAction.ts # AI report generation (Node.js)
+│   ├── analyticsCron.ts       # Weekly analytics cron
+│   ├── research.ts            # Research projects and findings
+│   ├── researchActions.ts     # Research execution actions
+│   ├── skillsMarketplace.ts   # Skills marketplace management
+│   ├── skillsMarketplaceActions.ts # Skills sync from registries
+│   ├── supermemory.ts         # Supermemory config
+│   ├── supermemoryActions.ts  # Persistent memory actions
 │   ├── schema.ts              # Database schema
 │   ├── convex.config.ts       # Component registration
 │   └── http.ts                # HTTP endpoints
 ├── src/                       # React frontend
 │   ├── pages/
-│   │   ├── LandingPage.tsx   # Public landing with tweets + activity
-│   │   ├── ChatPage.tsx      # Chat UI
-│   │   ├── SetupWizard.tsx   # First-run setup
-│   │   ├── SyncBoardX.tsx    # X/Twitter config
-│   │   ├── SyncBoard*.tsx    # Other admin pages
+│   │   ├── LandingPage.tsx    # Public landing with tweets + activity
+│   │   ├── ChatPage.tsx       # Chat UI with agent selector
+│   │   ├── SetupWizard.tsx    # First-run setup
+│   │   ├── SyncBoardAgents.tsx    # Multi-agent management
+│   │   ├── SyncBoardAgentDetail.tsx # Agent configuration
+│   │   ├── SyncBoardSouls.tsx     # Shared soul documents
+│   │   ├── SyncBoardAgentFeed.tsx # Unified agent activity feed
+│   │   ├── SyncBoardX.tsx     # X/Twitter config
+│   │   ├── SyncBoardMedia.tsx # File manager
+│   │   ├── SyncBoardStagehand.tsx # Browser automation
+│   │   ├── SyncBoardFirecrawl.tsx # Web scraping
+│   │   ├── SyncBoardAnalytics.tsx # AI analytics reports
+│   │   ├── SyncBoardResearch.tsx  # Research projects
+│   │   ├── SyncBoardMemory.tsx    # Supermemory config
+│   │   ├── SyncBoard*.tsx     # Other admin pages
 │   │   └── SyncBoardLogin.tsx # Password login
 │   ├── components/
+│   │   ├── agents/            # Multi-agent UI components
+│   │   │   ├── AgentCard.tsx  # Agent summary card
+│   │   │   ├── AgentControls.tsx # Run/pause/restart controls
+│   │   │   ├── AgentSelector.tsx # Chat agent picker
+│   │   │   └── AgentFeedItem.tsx # Activity feed entry
+│   │   ├── chat/              # Chat components
+│   │   └── syncboard/         # SyncBoard layout
 │   └── styles/
 │       ├── tokens.css         # Design tokens (Geist fonts)
 │       └── global.css
@@ -234,14 +281,14 @@ clawsync/
 
 ClawSync uses a custom design system with Geist fonts from Vercel.
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--bg-primary` | #f3f3f3 | Page backgrounds |
-| `--bg-secondary` | #ececec | Cards, inputs |
-| `--interactive` | #ea5b26 | Buttons, links |
-| `--text-primary` | #232323 | Body text |
-| `--font-sans` | Geist | UI text |
-| `--font-mono` | Geist Mono | Code |
+| Token            | Value      | Usage            |
+| ---------------- | ---------- | ---------------- |
+| `--bg-primary`   | #f3f3f3    | Page backgrounds |
+| `--bg-secondary` | #ececec    | Cards, inputs    |
+| `--interactive`  | #ea5b26    | Buttons, links   |
+| `--text-primary` | #232323    | Body text        |
+| `--font-sans`    | Geist      | UI text          |
+| `--font-mono`    | Geist Mono | Code             |
 
 All tokens are in `src/styles/tokens.css`. Never hardcode colors.
 
@@ -260,12 +307,14 @@ npm run typecheck    # TypeScript check
 ## Adding Skills
 
 ### Template Skill
+
 1. SyncBoard > Skills > Add Skill
 2. Select "Template Skill"
 3. Choose a template and configure
 4. Approve the skill
 
 ### Webhook Skill
+
 1. SyncBoard > Skills > Add Skill
 2. Select "Webhook Skill"
 3. Enter the API endpoint URL
@@ -273,6 +322,7 @@ npm run typecheck    # TypeScript check
 5. Approve the skill
 
 ### Code Skill
+
 Add a file in `convex/agent/skills/` and register it in the skill registry.
 
 ## Security
@@ -298,4 +348,4 @@ MIT License. Fork it, own it.
 
 ---
 
-Built with [Convex](https://convex.dev), [WorkOS](https://workos.com) (coming soon), [xAI](https://x.ai), and [Geist](https://vercel.com/font).
+Built with [Convex](https://convex.dev), [WorkOS](https://workos.com) (coming soon), [xAI](https://x.ai), [Supermemory](https://supermemory.ai), and [Geist](https://vercel.com/font).

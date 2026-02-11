@@ -132,7 +132,7 @@ export function SyncBoardMcp() {
 
         <div className="servers-list">
           {servers && servers.length > 0 ? (
-            servers.map((server: { _id: string; name: string; url: string; approved: boolean; enabled: boolean; healthStatus?: string; rateLimitPerMinute: number; lastHealthCheck?: number }) => (
+            servers.map((server) => (
               <div key={server._id} className="server-card card">
                 <div className="server-header">
                   <h3>{server.name}</h3>

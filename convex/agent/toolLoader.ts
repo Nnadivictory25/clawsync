@@ -1,6 +1,6 @@
 import { ActionCtx } from '../_generated/server';
 import { api, internal } from '../_generated/api';
-import { Doc } from '../_generated/dataModel';
+import { Doc, Id } from '../_generated/dataModel';
 import { createTool } from '@convex-dev/agent';
 import { jsonSchema } from 'ai';
 import { checkSecurity, truncateForLog } from './security';
@@ -19,6 +19,10 @@ import { createWebFetchTool } from './tools/webFetch';
  * Assembles the agent's tools at invocation time from:
  * 1. Skills from skillRegistry (approved + active)
  * 2. Tools from connected MCP servers (approved + enabled)
+ * 3. Agent-to-agent interaction tools (multi-agent)
+ *
+ * Multi-agent support: pass agentId to load only that agent's
+ * assigned skills/MCP servers. Without agentId loads all (backward compat).
  *
  * All tools pass through the security checker before execution.
  */
@@ -26,15 +30,42 @@ import { createWebFetchTool } from './tools/webFetch';
 export type ToolSet = Record<string, any>;
 
 /**
- * Load all tools for the agent
+ * Load tools for an agent (scoped by agentId or all if not provided)
  */
-export async function loadTools(ctx: ActionCtx): Promise<ToolSet> {
+export async function loadTools(
+  ctx: ActionCtx,
+  agentId?: Id<'agents'>
+): Promise<ToolSet> {
   const tools: ToolSet = {};
+
+  // Determine which skill IDs to load
+  let allowedSkillIds: Set<string> | null = null;
+  let allowedMcpIds: Set<string> | null = null;
+
+  if (agentId) {
+    // Per-agent scoped: only load assigned skills/MCP servers
+    const skillIds: Id<'skillRegistry'>[] = await ctx.runQuery(
+      internal.agentAssignments.getAgentSkillIds,
+      { agentId }
+    );
+    allowedSkillIds = new Set(skillIds as string[]);
+
+    const mcpIds: Id<'mcpServers'>[] = await ctx.runQuery(
+      internal.agentAssignments.getAgentMcpIds,
+      { agentId }
+    );
+    allowedMcpIds = new Set(mcpIds as string[]);
+  }
 
   // Load skills from skillRegistry
   const skills = await ctx.runQuery(internal.skillRegistry.getActiveApproved);
 
   for (const skill of skills) {
+    // If scoped, only include assigned skills
+    if (allowedSkillIds && !allowedSkillIds.has(skill._id as string)) {
+      continue;
+    }
+
     const toolFn = createToolFromSkill(ctx, skill);
     if (toolFn) {
       // Sanitize name to match Anthropic's pattern: ^[a-zA-Z0-9_-]{1,128}
@@ -48,12 +79,19 @@ export async function loadTools(ctx: ActionCtx): Promise<ToolSet> {
 
   // Load tools from enabled MCP servers
   try {
-    const mcpServers = await ctx.runQuery(api.mcpServers.getEnabledApproved);
+    const mcpServers: Array<{ name: string; url?: string; _id: any }> =
+      // @ts-expect-error Deep type instantiation in generated API types
+      await ctx.runQuery(api.mcpServers.getEnabledApproved);
     console.log(`[MCP] Found ${mcpServers.length} enabled MCP servers`);
 
-        for (const server of mcpServers) {
+    for (const server of mcpServers) {
       if (!server.url) {
         console.log(`[MCP] Server ${server.name} has no URL, skipping`);
+        continue;
+      }
+
+      // If scoped, only include assigned MCP servers
+      if (allowedMcpIds && !allowedMcpIds.has(server._id as string)) {
         continue;
       }
 
@@ -231,7 +269,70 @@ export async function loadTools(ctx: ActionCtx): Promise<ToolSet> {
     },
   });
 
+  // Add agent-to-agent interaction tools if multi-agent
+  if (agentId) {
+    try {
+      const allAgents: Array<{ _id: any; name: string; status: string }> =
+        await ctx.runQuery(api.agents.list);
+      const peerAgents = allAgents.filter(
+        (a) => (a._id as string) !== (agentId as string) && a.status !== 'error'
+      );
+
+      for (const peer of peerAgents) {
+        const safeName = `ask_agent_${peer.name.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 100)}`;
+        tools[safeName] = createAgentTool(ctx, agentId, peer._id, peer.name);
+      }
+    } catch {
+      // Agent listing failed; skip peer tools
+    }
+  }
+
   return tools;
+}
+
+/**
+ * Create a tool that invokes another agent (agent-to-agent interaction)
+ */
+function createAgentTool(
+  ctx: ActionCtx,
+  fromAgentId: Id<'agents'>,
+  toAgentId: Id<'agents'>,
+  toAgentName: string
+) {
+  return createTool({
+    description: `Ask agent "${toAgentName}" a question and get their response`,
+    args: jsonSchema<{ question: string }>({
+      type: 'object' as const,
+      properties: {
+        question: { type: 'string', description: 'The question to ask the other agent' },
+      },
+      required: ['question'],
+    }),
+    handler: async (_toolCtx: any, { question }: { question: string }) => {
+      try {
+        // Import dynamically to avoid circular deps
+        const { createDynamicAgent } = await import('./clawsync');
+        const peer = await createDynamicAgent(ctx, toAgentId);
+        const { thread, threadId } = await peer.createThread(ctx, {});
+        const result = await thread.generateText({ prompt: question });
+
+        // Log the interaction
+        await ctx.runMutation(internal.agentInteractions.log, {
+          fromAgentId,
+          toAgentId,
+          content: question,
+          response: result.text.slice(0, 2000),
+          threadId,
+        });
+
+        return result.text;
+      } catch (error) {
+        return {
+          error: error instanceof Error ? error.message : 'Agent interaction failed',
+        };
+      }
+    },
+  });
 }
 
 /**

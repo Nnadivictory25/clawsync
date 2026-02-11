@@ -51,6 +51,15 @@ export const getById = internalQuery({
   },
 });
 
+// Get server by ID (internal, for actions)
+export const getByIdInternal = internalQuery({
+  args: { id: v.id('mcpServers') },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id) ?? null;
+  },
+});
+
 // Add a new MCP server
 export const create = mutation({
   args: {

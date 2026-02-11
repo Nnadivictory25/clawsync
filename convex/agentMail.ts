@@ -476,7 +476,7 @@ export const createInbox = action({
 // List inboxes from AgentMail API
 export const fetchInboxes = action({
   args: {},
-  handler: async (ctx) => {
+  handler: async (_ctx) => {
     const apiKey = process.env.AGENTMAIL_API_KEY;
     if (!apiKey) {
       throw new Error('AGENTMAIL_API_KEY environment variable not set');
@@ -579,7 +579,7 @@ export const sendEmail = action({
 // Fetch messages from AgentMail API
 export const fetchMessages = action({
   args: { inboxId: v.string() },
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     const apiKey = process.env.AGENTMAIL_API_KEY;
     if (!apiKey) {
       throw new Error('AGENTMAIL_API_KEY environment variable not set');

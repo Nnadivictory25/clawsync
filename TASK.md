@@ -2,6 +2,57 @@
 
 ## Completed Tasks
 
+### Full TypeScript Strict Pass (2026-02-10)
+
+- [x] Fixed all remaining TypeScript errors across 13 backend and frontend files
+- [x] Backend: prefixed unused params with `_` in agentMail, http, mcp, mcp/server, xTwitterActions
+- [x] Backend: removed unused imports in api/auth.ts and skillInvocations.ts
+- [x] Frontend: removed explicit `{ _id: string }` type annotations from map callbacks in 5 SyncBoard pages
+- [x] Frontend: removed unused ArrowsClockwise import in SyncBoardAgentMail.tsx
+- [x] `npx convex codegen` passes clean
+- [x] `npx tsc --noEmit` passes with zero errors
+
+### SyncBoard Feature Expansion (2026-02-09)
+
+- [x] Media file manager (Convex native default, R2 optional)
+  - `convex/media.ts` (upload URL, save, list, delete, stats)
+  - `convex/r2Storage.ts` (R2 presigned upload, save, URL retrieval)
+  - `src/pages/SyncBoardMedia.tsx` frontend
+- [x] Stagehand browser automation
+  - `convex/stagehand.ts` (job storage queries/mutations)
+  - `convex/stagehandActions.ts` (Node.js extract, act, observe, agent)
+  - `src/pages/SyncBoardStagehand.tsx` frontend
+- [x] Firecrawl web scraping
+  - `convex/firecrawl.ts` (exposeApi with auth wrapper)
+  - `src/pages/SyncBoardFirecrawl.tsx` frontend
+- [x] AI Analytics reports
+  - `convex/analytics.ts` (metrics snapshot aggregation)
+  - `convex/analyticsReport.ts` (report CRUD, manual trigger)
+  - `convex/analyticsReportAction.ts` (Node.js AI generation)
+  - `convex/analyticsCron.ts` (weekly Monday 7AM UTC cron)
+  - `src/pages/SyncBoardAnalytics.tsx` frontend
+- [x] Research projects
+  - `convex/research.ts` (project/findings/sources CRUD)
+  - `convex/researchActions.ts` (Node.js: competitive, topic, realtime, API)
+  - `src/pages/SyncBoardResearch.tsx` frontend
+- [x] Skills marketplace
+  - `convex/skillsMarketplace.ts` (source management, browse, activate/deactivate)
+  - `convex/skillsMarketplaceActions.ts` (Node.js sync from GitHub, registries)
+  - Updated `src/pages/SyncBoardSkills.tsx` with Browse and Sources tabs
+- [x] Supermemory persistent agent memory
+  - `convex/supermemory.ts` (config queries/mutations)
+  - `convex/supermemoryActions.ts` (Node.js: add, search, store, inject)
+  - `src/pages/SyncBoardMemory.tsx` frontend
+  - Integrated into `convex/chat.ts` for auto-inject and auto-store
+- [x] Schema expanded with 9 new tables
+- [x] Convex component registrations (r2, stagehand, firecrawl)
+- [x] SyncBoard navigation updated with 6 new nav items
+- [x] App.tsx routes added for all new pages
+- [x] .env.example updated with all new env vars
+- [x] FILES.md, CHANGELOG.md, TASK.md updated
+- [x] Convex codegen passes clean
+- [x] Zero new TypeScript errors introduced
+
 ### Phase 0: Fork Owner MVP
 
 - [x] SyncBoard password protection
@@ -182,7 +233,99 @@
   - Fixed `result as Record` cast in chat.ts
   - Ran `npm install` to sync installed packages with package.json
 
+### TypeScript strict type safety pass (44 errors to 0)
+
+- [x] Fix `xTwitter.ts` Node.js runtime conflict
+  - Removed `'use node'` (mutations/queries must run in V8)
+  - Split actions to new `convex/xTwitterActions.ts` with `'use node'`
+  - Added `return null` to handlers with `returns: v.null()`
+
+- [x] Fix `voice/providers.ts` circular type references (10 errors)
+  - Extracted `handleTextToSpeech` and `handleSpeechToText` into standalone functions with explicit return types
+  - Used `as any` on `internal.voice.queries.*` function references
+  - Fixed spread type errors with ternary patterns
+
+- [x] Fix `chat.ts` implicit any types (5 errors)
+  - Added explicit type annotations to `config`, `system`, `result` variables
+  - Replaced `stepCountIs` import with `maxSteps` option
+
+- [x] Fix `mcp/client.ts` circular types (3 errors)
+  - Removed invalid module augmentation
+  - Added `as any` on function references, explicit `Response` type
+  - Changed `getById` to `getByIdInternal` (internalQuery)
+
+- [x] Fix `mcp/server.ts` complex type inference (6 errors)
+  - Simplified httpAction helper signatures
+  - Added explicit type annotations on `body` and `skills` arrays
+
+- [x] Fix `http.ts` implicit any and wrong args (2 errors)
+  - Added type annotations to `.map()` callbacks
+  - Fixed `threads.list` to use `paginationOpts`
+  - Fixed `threads.create` args
+
+- [x] Fix `mcp.ts` type mismatch (1 error)
+  - Cast `skill as any` for `checkSecurity` call
+
+- [x] Fix `apiKeys.ts` readonly array (1 error)
+  - Spread `API_SCOPES` arrays into mutable arrays
+
+- [x] Fix `agent/modelRouter.ts` deep type instantiation (1 error)
+  - `@ts-expect-error` on `internal.agentConfig.getConfig`
+
+- [x] Fix `agent/toolLoader.ts` deep type instantiation (1 error)
+  - `@ts-expect-error` on `api.mcpServers.getEnabledApproved`
+
+- [x] Add `threads.create` internal mutation
+  - Uses `components.agent.threads.createThread`
+  - Returns `{ threadId: thread._id }`
+
+- [x] Add `mcpServers.getByIdInternal` internalQuery
+  - Secure internal-only access for actions
+
+- [x] Verified: `npx convex codegen` passes with 0 errors
+
 ---
+
+### Multi-Agent System (2026-02-10)
+
+- [x] Schema: 5 new tables (agents, souls, agentSkillAssignments, agentMcpAssignments, agentInteractions)
+- [x] Schema: added agentId field and by_agentId index to activityLog
+- [x] Backend: agents.ts CRUD (list, get, create, update, remove, reorder, status/mode control)
+- [x] Backend: souls.ts CRUD (list, get, create, update, remove with usage check)
+- [x] Backend: agentAssignments.ts per-agent skill and MCP server management
+- [x] Backend: agentInteractions.ts logging and retrieval
+- [x] Backend: updated createDynamicAgent in clawsync.ts with optional agentId
+- [x] Backend: updated toolLoader.ts with per-agent tool scoping and ask_agent tools
+- [x] Backend: added resolveModelFromConfig to modelRouter.ts
+- [x] Backend: updated chat.ts (send, stream, apiSend) with optional agentId and mode checks
+- [x] Backend: updated activityLog.ts with agentId param and listByAgent query
+- [x] Backend: updated http.ts with GET /api/v1/agents and agentId in chat endpoint
+- [x] Backend: updated setup.ts with auto-migration from agentConfig to multi-agent
+- [x] Frontend: AgentCard, AgentControls, AgentSelector, AgentFeedItem components
+- [x] Frontend: SyncBoardAgents page with agent list and create form
+- [x] Frontend: SyncBoardAgentDetail page with tabbed configuration
+- [x] Frontend: SyncBoardSouls page for shared soul management
+- [x] Frontend: SyncBoardAgentFeed page with unified timeline and filters
+- [x] Frontend: ChatPage updated with AgentSelector and agent switching
+- [x] Frontend: AgentChat updated to pass agentId to backend
+- [x] Frontend: SyncBoardLayout nav updated with Agents, Souls, Agent Feed links
+- [x] Frontend: App.tsx routes for all new pages
+- [x] features.html updated with Multi-Agent, Shared Souls, Agent Controls cards
+- [x] clawsynclanding/dist/index.html updated with new feature cards
+- [x] Convex codegen passes with 0 new errors
+- [x] TypeScript strict check passes (no new errors from multi-agent changes)
+
+### Documentation Updates (2026-02-10)
+
+- [x] Added Multi-Agent System section to clawsynclanding/dist/docs.html (sidebar nav, full section with controls table, shared souls, per-agent assignments, agent-to-agent interaction, activity feed, database tables, API, backward compat callout)
+- [x] Added Multi-Agent System section to root docs.html (identical changes)
+- [x] Updated SyncBoard sections table in both docs files with Agents, Souls, Agent Feed rows
+- [x] Updated Database Schema section in both docs files with Multi-Agent tables subsection
+- [x] Updated embedded markdown content in both docs files
+- [x] Verified features.html and clawsynclanding/dist/index.html are in sync (17 feature cards)
+- [x] Updated FILES.md with clawsynclanding/dist/ section
+- [x] Updated CHANGELOG.md with docs changes
+- [x] `npx tsc --noEmit` passes with zero errors
 
 ## In Progress
 

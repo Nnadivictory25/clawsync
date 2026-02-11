@@ -5,6 +5,48 @@ All notable changes to ClawSync are documented here.
 ## [Unreleased]
 
 ### Added
+- Multi-agent system: create, configure, and run multiple agents simultaneously
+- Per-agent skill and MCP server assignments with `agentAssignments.ts`
+- Shared soul documents: reusable personality/instruction sets across agents via `souls.ts`
+- Agent operational controls: auto-run, pause, restart, single task, think-to-continue modes
+- Agent-to-agent interaction via dynamically generated ask_agent tools in `toolLoader.ts`
+- Agent interaction logging and retrieval via `agentInteractions.ts`
+- Agent selector dropdown in chat header for switching active agent
+- SyncBoard Agents page with agent cards, status indicators, and create form
+- SyncBoard Agent Detail page with tabs for overview, soul, model, skills, MCP, and activity
+- SyncBoard Souls page for managing shared soul documents
+- SyncBoard Agent Feed page with unified activity timeline and agent filter chips
+- Per-agent activity feed filtering via `activityLog.listByAgent` query
+- Auto-migration from single-agent `agentConfig` to multi-agent system in `setup.ts`
+- HTTP API `GET /api/v1/agents` endpoint for listing all agents
+- HTTP API `POST /api/v1/agent/chat` now accepts optional `agentId` parameter
+- 5 new schema tables: `agents`, `souls`, `agentSkillAssignments`, `agentMcpAssignments`, `agentInteractions`
+- `agentId` field added to `activityLog` table with `by_agentId` index
+- `resolveModelFromConfig` in `modelRouter.ts` for per-agent model resolution
+- AgentCard, AgentControls, AgentSelector, AgentFeedItem frontend components
+- SyncBoard sidebar navigation entries for Agents, Souls, and Agent Feed
+- App.tsx routes for `/syncboard/agents`, `/syncboard/agents/:id`, `/syncboard/souls`, `/syncboard/agent-feed`
+- Multi-Agent, Shared Soul Documents, and Agent Controls feature cards on features.html
+- Multi-agent documentation section in docs.html and clawsynclanding/dist/docs.html (sidebar nav, agent controls table, shared souls, per-agent assignments, agent-to-agent interaction, database tables, API endpoints, backward compatibility callout)
+- Updated SyncBoard sections table in docs with Agents, Souls, Agent Feed rows
+- Updated Database Schema section in docs with Multi-Agent tables subsection
+- Updated embedded markdown content in both docs files to match HTML additions
+- Verified features.html and clawsynclanding/dist/index.html feature cards are in sync (17 cards)
+- Media file manager (Convex native storage default, Cloudflare R2 optional) with upload, list, delete, and stats
+- Stagehand browser automation integration (extract, act, observe, agent) via @browserbasehq/convex-stagehand
+- Firecrawl web scraping integration with durable caching via convex-firecrawl-scrape
+- AI Analytics with weekly cron reports and manual trigger (calls Anthropic or OpenAI for analysis)
+- Research projects feature (competitive, topic, realtime X/Twitter, API sources) with findings
+- Skills marketplace with external source registries (GitHub repos, Skills Directory, custom JSON)
+- Supermemory persistent agent memory with auto-store conversations and auto-inject context
+- SyncBoard nav items for Media, Stagehand, Firecrawl, Research, Analytics, and Memory
+- R2, Stagehand, and Firecrawl Convex component registrations in convex.config.ts
+- 9 new schema tables: mediaFiles, stagehandJobs, aiAnalyticsReports, researchProjects, researchFindings, researchSources, externalSkillSources, importedSkills, supermemoryConfig
+- Skills page Browse and Sources tabs for marketplace management
+- X/Twitter search recent tweets action for research
+- Environment variable support for R2, Browserbase, Firecrawl, X Bearer Token, and Supermemory
+- `convex/xTwitterActions.ts` for Node.js runtime X/Twitter actions (split from xTwitter.ts)
+- `threads.create` internal mutation for HTTP API thread creation
 - Streaming message subscription via `convex/messages.ts` using `listMessages` + `syncStreams` from `@convex-dev/agent`
 - Frontend real-time message updates with `useThreadMessages` hook from `@convex-dev/agent/react`
 - Tool call display in chat UI with expandable cards showing input and output
@@ -26,6 +68,36 @@ All notable changes to ClawSync are documented here.
 - `convex/_generated/` added to `.gitignore`
 
 ### Fixed
+- Full TypeScript strict pass: resolved all remaining TS errors across 13 files to reach zero errors
+- `agentMail.ts`: prefixed unused `ctx` params in `fetchInboxes` and `fetchMessages` actions
+- `api/auth.ts`: removed unused `QueryCtx` import
+- `http.ts`: prefixed unused `ctx`/`request` params in 5 TODO webhook handlers
+- `mcp.ts`: prefixed unused `ctx` in `listResources`/`readResource`, removed unused `kbId` assignment
+- `mcp/server.ts`: prefixed unused `params` destructure
+- `skillInvocations.ts`: removed unused `mutation` import
+- `xTwitterActions.ts`: prefixed unused `ctx` in `readTweet` and `searchRecentTweets`
+- `SyncBoardActivity.tsx`: removed explicit `{ _id: string }` type annotation, lets Convex infer `Id<"activityLog">`
+- `SyncBoardAgentMail.tsx`: removed unused `ArrowsClockwise` import
+- `SyncBoardApi.tsx`: removed explicit type annotation from map callback, fixes `string` vs `Id<"apiKeys">`
+- `SyncBoardChannels.tsx`: removed explicit type annotation from map callback, fixes `string` vs `Id<"channelConfig">`
+- `SyncBoardMcp.tsx`: removed explicit type annotation from map callback, fixes `string` vs `Id<"mcpServers">` and optional `url`
+- `SyncBoardSkills.tsx`: removed explicit type annotation from map callback, fixes `string` vs `Id<"skillRegistry">`
+- `xTwitter.ts`: Removed `'use node'` directive, split actions to `xTwitterActions.ts` (mutations cannot run in Node.js)
+- `voice/providers.ts`: Extracted handlers with explicit return types to break circular type references through `internal.voice`
+- `voice/providers.ts`: Fixed spread type errors (ternary instead of `&&` for conditional object spreads)
+- `chat.ts`: Added explicit type annotations to break circular type inference on `config`, `system`, `result`
+- `mcp/client.ts`: Fixed circular types with `as any` on function references and `Response` type on fetch
+- `mcp/server.ts`: Simplified httpAction helper signatures, added explicit type annotations
+- `mcp.ts`: Cast `skill` argument for `checkSecurity` to match expected `Doc` type
+- `agent/modelRouter.ts`: Fixed deep type instantiation on `internal.agentConfig.getConfig`
+- `agent/toolLoader.ts`: Fixed deep type instantiation on `api.mcpServers.getEnabledApproved`
+- `http.ts`: Fixed `threads.list` call to use `paginationOpts` instead of `limit`
+- `http.ts`: Fixed `threads.create` call to use `title` instead of non-existent `metadata`
+- `apiKeys.ts`: Fixed readonly array assignment by spreading into mutable arrays
+- `mcpServers.ts`: Added `getByIdInternal` as `internalQuery` for secure internal access
+- `threads.ts`: Added `create` internal mutation with correct `createThread` return type handling
+- Added `returns` validators to all functions missing them across `xTwitter.ts`, `voice/providers.ts`, `mcp/client.ts`, `mcp.ts`
+- Added `return null` to handlers with `returns: v.null()` in `xTwitter.ts`
 - `agentMail.ts`: `api.activityLog.log` changed to `internal.activityLog.log` (was runtime crash)
 - `xTwitter.ts`: `getConfigInternal` changed from `query` to `internalQuery` (was runtime crash)
 - `execute.ts`: string function reference replaced with `internal.skillSecrets.getBySkill` (was runtime crash)

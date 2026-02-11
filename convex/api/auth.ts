@@ -1,4 +1,4 @@
-import { ActionCtx, QueryCtx } from '../_generated/server';
+import { ActionCtx } from '../_generated/server';
 import { internal } from '../_generated/api';
 import { Doc } from '../_generated/dataModel';
 

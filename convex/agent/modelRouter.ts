@@ -38,7 +38,14 @@ export interface ResolvedModel {
  */
 export async function resolveModel(ctx: ActionCtx): Promise<ResolvedModel> {
   // Get config from Convex
-  const config = await ctx.runQuery(internal.agentConfig.getConfig);
+  const config: {
+    modelProvider: string;
+    model: string;
+    fallbackProvider?: string;
+    fallbackModel?: string;
+  } | null =
+    // @ts-expect-error Deep type instantiation in generated API types
+    await ctx.runQuery(internal.agentConfig.getConfig);
 
   if (!config) {
     // Default to Google Gemini if no config
@@ -145,6 +152,44 @@ function createModel(provider: string, modelId: string): LanguageModel {
     default:
       // Default to Anthropic
       return anthropic(modelId);
+  }
+}
+
+/**
+ * Resolve model from an explicit config object (multi-agent support).
+ * Accepts a plain config rather than querying agentConfig.
+ */
+export async function resolveModelFromConfig(
+  _ctx: ActionCtx,
+  config: ModelConfig
+): Promise<ResolvedModel> {
+  try {
+    const model = createModel(config.provider, config.model);
+    return {
+      model,
+      provider: config.provider,
+      modelId: config.model,
+      isFallback: false,
+    };
+  } catch {
+    // Try fallback if available
+    if (config.fallbackProvider && config.fallbackModel) {
+      const fallbackModel = createModel(config.fallbackProvider, config.fallbackModel);
+      return {
+        model: fallbackModel,
+        provider: config.fallbackProvider,
+        modelId: config.fallbackModel,
+        isFallback: true,
+      };
+    }
+
+    // Default fallback
+    return {
+      model: anthropic('claude-sonnet-4-20250514'),
+      provider: 'anthropic',
+      modelId: 'claude-sonnet-4-20250514',
+      isFallback: true,
+    };
   }
 }
 

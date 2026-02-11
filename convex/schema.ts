@@ -131,17 +131,19 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index('by_name', ['name']),
 
-  // Activity log
+  // Activity log (agentId added for multi-agent support)
   activityLog: defineTable({
     actionType: v.string(),
     summary: v.string(),
     channel: v.optional(v.string()),
+    agentId: v.optional(v.id('agents')),
     visibility: v.union(v.literal('public'), v.literal('private')),
     metadata: v.optional(v.string()),
     timestamp: v.number(),
   })
     .index('by_visibility_timestamp', ['visibility', 'timestamp'])
-    .index('by_channel', ['channel']),
+    .index('by_channel', ['channel'])
+    .index('by_agentId', ['agentId']),
 
   // Channel configs
   channelConfig: defineTable({
@@ -362,6 +364,273 @@ export default defineSchema({
     .index('by_messageId', ['messageId'])
     .index('by_inboxId', ['inboxId'])
     .index('by_timestamp', ['timestamp']),
+
+  // ============================================
+  // Media / File Storage
+  // ============================================
+
+  // Media file tracking (both Convex native and R2)
+  mediaFiles: defineTable({
+    filename: v.string(),
+    contentType: v.string(),
+    size: v.number(),
+    storageBackend: v.union(v.literal('convex'), v.literal('r2')),
+    storageId: v.optional(v.id('_storage')), // Convex native
+    r2Key: v.optional(v.string()), // R2 key
+    url: v.optional(v.string()),
+    uploadedBy: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index('by_backend', ['storageBackend'])
+    .index('by_createdAt', ['createdAt']),
+
+  // ============================================
+  // Stagehand (browser automation)
+  // ============================================
+
+  stagehandJobs: defineTable({
+    jobType: v.union(
+      v.literal('extract'),
+      v.literal('act'),
+      v.literal('observe'),
+      v.literal('agent')
+    ),
+    url: v.string(),
+    instruction: v.string(),
+    status: v.union(
+      v.literal('pending'),
+      v.literal('running'),
+      v.literal('completed'),
+      v.literal('failed')
+    ),
+    result: v.optional(v.string()), // JSON result
+    errorMessage: v.optional(v.string()),
+    durationMs: v.optional(v.number()),
+    createdAt: v.number(),
+    completedAt: v.optional(v.number()),
+  })
+    .index('by_status', ['status'])
+    .index('by_createdAt', ['createdAt']),
+
+  // ============================================
+  // AI Analytics Reports
+  // ============================================
+
+  aiAnalyticsReports: defineTable({
+    reportType: v.union(v.literal('weekly'), v.literal('manual')),
+    title: v.string(),
+    summary: v.string(), // AI-generated executive summary
+    sections: v.string(), // JSON array of analysis sections
+    anomalies: v.string(), // JSON array of detected anomalies
+    recommendations: v.string(), // JSON array of recommendations
+    dataSnapshot: v.string(), // JSON snapshot of metrics used
+    model: v.string(),
+    generatedAt: v.number(),
+  })
+    .index('by_generatedAt', ['generatedAt'])
+    .index('by_reportType', ['reportType']),
+
+  // ============================================
+  // Research Projects
+  // ============================================
+
+  researchProjects: defineTable({
+    title: v.string(),
+    description: v.optional(v.string()),
+    researchType: v.union(
+      v.literal('competitive'),
+      v.literal('topic'),
+      v.literal('realtime'),
+      v.literal('api')
+    ),
+    status: v.union(
+      v.literal('draft'),
+      v.literal('running'),
+      v.literal('completed'),
+      v.literal('failed')
+    ),
+    config: v.optional(v.string()), // JSON: targets, keywords, API sources
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_status', ['status'])
+    .index('by_type', ['researchType'])
+    .index('by_createdAt', ['createdAt']),
+
+  researchFindings: defineTable({
+    projectId: v.id('researchProjects'),
+    source: v.string(), // URL, API name, tweet ID
+    sourceType: v.union(
+      v.literal('web'),
+      v.literal('twitter'),
+      v.literal('api'),
+      v.literal('scrape')
+    ),
+    title: v.optional(v.string()),
+    content: v.string(), // Raw content or extracted data
+    aiSummary: v.optional(v.string()), // AI-generated summary
+    relevanceScore: v.optional(v.number()),
+    metadata: v.optional(v.string()), // JSON: author, date, metrics
+    createdAt: v.number(),
+  })
+    .index('by_project', ['projectId'])
+    .index('by_sourceType', ['sourceType'])
+    .index('by_createdAt', ['createdAt']),
+
+  researchSources: defineTable({
+    name: v.string(),
+    sourceType: v.union(
+      v.literal('api'),
+      v.literal('rss'),
+      v.literal('twitter_search'),
+      v.literal('website')
+    ),
+    config: v.string(), // JSON: API endpoint, headers, auth
+    enabled: v.boolean(),
+    lastFetchedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_type', ['sourceType'])
+    .index('by_enabled', ['enabled']),
+
+  // ============================================
+  // Skills Marketplace
+  // ============================================
+
+  // External skill source registries
+  externalSkillSources: defineTable({
+    name: v.string(),
+    sourceType: v.union(
+      v.literal('skills_directory'), // skillsdirectory.com
+      v.literal('github_repo'), // GitHub repo with skills/ dir
+      v.literal('custom_registry') // Custom JSON endpoint
+    ),
+    url: v.string(), // API URL or repo path
+    apiKey: v.optional(v.string()), // For authenticated sources
+    enabled: v.boolean(),
+    lastSyncedAt: v.optional(v.number()),
+    skillCount: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_sourceType', ['sourceType'])
+    .index('by_enabled', ['enabled']),
+
+  // Imported skills from external sources
+  importedSkills: defineTable({
+    sourceId: v.id('externalSkillSources'),
+    externalId: v.string(), // ID from the source registry
+    name: v.string(),
+    description: v.string(),
+    category: v.optional(v.string()),
+    content: v.string(), // Full SKILL.md or instruction content
+    version: v.optional(v.string()),
+    author: v.optional(v.string()),
+    sourceUrl: v.optional(v.string()), // Link back to original
+    skillRegistryId: v.optional(v.id('skillRegistry')),
+    status: v.union(
+      v.literal('available'), // Fetched but not activated
+      v.literal('active'), // Imported into skillRegistry
+      v.literal('disabled') // Previously active, now disabled
+    ),
+    importedAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_source', ['sourceId'])
+    .index('by_status', ['status'])
+    .index('by_externalId', ['externalId']),
+
+  // ============================================
+  // Multi-Agent System
+  // ============================================
+
+  // Individual agent configurations
+  agents: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    soulId: v.optional(v.id('souls')),
+    soulDocument: v.optional(v.string()), // Inline soul if no shared soul
+    systemPrompt: v.optional(v.string()),
+    model: v.string(),
+    modelProvider: v.string(),
+    fallbackModel: v.optional(v.string()),
+    fallbackProvider: v.optional(v.string()),
+    status: v.union(
+      v.literal('running'),
+      v.literal('paused'),
+      v.literal('idle'),
+      v.literal('error')
+    ),
+    mode: v.union(
+      v.literal('auto'),
+      v.literal('paused'),
+      v.literal('single_task'),
+      v.literal('think_to_continue')
+    ),
+    avatar: v.optional(v.string()), // Icon identifier or hex color
+    isDefault: v.boolean(),
+    order: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_status', ['status'])
+    .index('by_default', ['isDefault'])
+    .index('by_order', ['order']),
+
+  // Shared soul documents (many agents can reference one soul)
+  souls: defineTable({
+    name: v.string(),
+    document: v.string(), // Markdown content
+    systemPrompt: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index('by_name', ['name']),
+
+  // Per-agent skill assignments
+  agentSkillAssignments: defineTable({
+    agentId: v.id('agents'),
+    skillId: v.id('skillRegistry'),
+    enabled: v.boolean(),
+  })
+    .index('by_agentId', ['agentId'])
+    .index('by_skillId', ['skillId']),
+
+  // Per-agent MCP server assignments
+  agentMcpAssignments: defineTable({
+    agentId: v.id('agents'),
+    mcpServerId: v.id('mcpServers'),
+    enabled: v.boolean(),
+  })
+    .index('by_agentId', ['agentId'])
+    .index('by_mcpServerId', ['mcpServerId']),
+
+  // Agent-to-agent interaction log
+  agentInteractions: defineTable({
+    fromAgentId: v.id('agents'),
+    toAgentId: v.id('agents'),
+    content: v.string(),
+    response: v.optional(v.string()),
+    threadId: v.optional(v.string()),
+    timestamp: v.number(),
+  })
+    .index('by_fromAgentId', ['fromAgentId'])
+    .index('by_toAgentId', ['toAgentId'])
+    .index('by_timestamp', ['timestamp']),
+
+  // ============================================
+  // Supermemory (persistent agent memory)
+  // ============================================
+
+  supermemoryConfig: defineTable({
+    enabled: v.boolean(),
+    containerPrefix: v.optional(v.string()), // Prefix for container tags
+    relevanceThreshold: v.optional(v.number()), // Min score for retrieval (0-1)
+    autoStoreConversations: v.boolean(), // Auto-store chat conversations
+    autoInjectContext: v.boolean(), // Auto-inject memory into agent prompt
+    maxMemoriesPerQuery: v.optional(v.number()), // Limit memories returned
+    updatedAt: v.number(),
+  }),
 
   // Cached tweets for landing page display
   xTweets: defineTable({

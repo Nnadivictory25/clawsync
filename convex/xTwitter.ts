@@ -1,6 +1,6 @@
 import { query, mutation, action, internalMutation, internalQuery } from './_generated/server';
-import { v } from 'convex/values';
 import { internal } from './_generated/api';
+import { v } from 'convex/values';
 
 /**
  * X/Twitter Integration
@@ -31,7 +31,7 @@ export const getConfig = query({
   args: {},
   returns: v.any(),
   handler: async (ctx) => {
-    return await ctx.db.query('xConfig').first();
+    return await ctx.db.query('xConfig').first() ?? null;
   },
 });
 
@@ -45,6 +45,7 @@ export const updateConfig = mutation({
     postFromAgent: v.boolean(),
     rateLimitPerHour: v.number(),
   },
+  returns: v.id('xConfig'),
   handler: async (ctx, args) => {
     const existing = await ctx.db.query('xConfig').first();
 
@@ -72,6 +73,7 @@ export const getLandingTweets = query({
   args: {
     limit: v.optional(v.number()),
   },
+  returns: v.array(v.any()),
   handler: async (ctx, args) => {
     const config = await ctx.db.query('xConfig').first();
 
@@ -93,6 +95,7 @@ export const listTweets = query({
   args: {
     limit: v.optional(v.number()),
   },
+  returns: v.array(v.any()),
   handler: async (ctx, args) => {
     return await ctx.db
       .query('xTweets')
@@ -108,6 +111,7 @@ export const toggleTweetLandingVisibility = mutation({
     tweetId: v.string(),
     showOnLanding: v.boolean(),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const tweet = await ctx.db
       .query('xTweets')
@@ -117,6 +121,7 @@ export const toggleTweetLandingVisibility = mutation({
     if (tweet) {
       await ctx.db.patch(tweet._id, { showOnLanding: args.showOnLanding });
     }
+    return null;
   },
 });
 
@@ -299,8 +304,9 @@ export const readTweet = action({
 // Internal query for actions to read X config
 export const getConfigInternal = internalQuery({
   args: {},
+  returns: v.any(),
   handler: async (ctx) => {
-    return await ctx.db.query('xConfig').first();
+    return await ctx.db.query('xConfig').first() ?? null;
   },
 });
 
@@ -320,6 +326,7 @@ export const cacheTweet = internalMutation({
     showOnLanding: v.boolean(),
     postedAt: v.optional(v.number()),
   },
+  returns: v.id('xTweets'),
   handler: async (ctx, args) => {
     // Check if tweet already exists
     const existing = await ctx.db
@@ -351,6 +358,7 @@ export const logTweetActivity = internalMutation({
     summary: v.string(),
     visibility: v.union(v.literal('public'), v.literal('private')),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     await ctx.db.insert('activityLog', {
       actionType: args.actionType,
@@ -359,6 +367,7 @@ export const logTweetActivity = internalMutation({
       visibility: args.visibility,
       timestamp: Date.now(),
     });
+    return null;
   },
 });
 
@@ -441,24 +450,6 @@ async function makeOAuthRequest(
 }
 
 /**
- * NOTE: For production X/Twitter integration, you should:
- *
- * 1. Install oauth-1.0a package: npm install oauth-1.0a
- * 2. Use proper OAuth 1.0a signing for POST requests
- * 3. Implement proper rate limiting (450 requests/15 min for user auth)
- * 4. Handle pagination for reading tweets
- * 5. Implement webhook for real-time mentions (requires Twitter Premium)
- *
- * Example with oauth-1.0a:
- *
- * import OAuth from 'oauth-1.0a';
- * import crypto from 'crypto';
- *
- * const oauth = new OAuth({
- *   consumer: { key: apiKey, secret: apiSecret },
- *   signature_method: 'HMAC-SHA1',
- *   hash_function(baseString, key) {
- *     return crypto.createHmac('sha1', key).update(baseString).digest('base64');
- *   },
- * });
+ * NOTE: X/Twitter actions (postTweet, fetchMentions, readTweet) are in
+ * xTwitterActions.ts which runs in Node.js runtime for process.env access.
  */

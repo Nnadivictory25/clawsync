@@ -9,7 +9,7 @@ Brief descriptions of key files in the ClawSync codebase.
 | `CLAUDE.md` | Project instructions for Claude Code AI assistant |
 | `README.md` | Project documentation with setup and deployment guides |
 | `features.html` | Standalone HTML features page for marketing |
-| `docs.html` | Comprehensive documentation with Mintlify-inspired design |
+| `docs.html` | Comprehensive documentation with multi-agent system docs |
 | `package.json` | Node.js dependencies and scripts |
 | `tsconfig.json` | TypeScript configuration |
 | `vite.config.ts` | Vite bundler configuration |
@@ -25,25 +25,45 @@ Brief descriptions of key files in the ClawSync codebase.
 | `crons.ts` | Background jobs (summaries, health checks, cleanup) |
 | `setup.ts` | Seed data and first-run configuration |
 | `syncboardAuth.ts` | SyncBoard password authentication |
-| `xTwitter.ts` | X/Twitter API v2 integration |
+| `xTwitter.ts` | X/Twitter queries, mutations, internal functions (V8 runtime) |
+| `xTwitterActions.ts` | X/Twitter actions: postTweet, fetchMentions, readTweet (Node.js runtime) |
 | `agentMail.ts` | AgentMail email integration |
 | `auth.config.ts` | Auth configuration (empty providers placeholder) |
 | `messages.ts` | Streaming message subscription with `listMessages` + `syncStreams` |
+| `media.ts` | Convex native file storage (upload URL, save, list, delete, stats) |
+| `r2Storage.ts` | Cloudflare R2 storage integration (optional, via @convex-dev/r2) |
+| `stagehand.ts` | Stagehand job storage (mutations/queries for browser automation jobs) |
+| `stagehandActions.ts` | Stagehand browser automation actions (Node.js: extract, act, observe, agent) |
+| `firecrawl.ts` | Firecrawl web scraping component (exposeApi wrapper with auth) |
+| `analytics.ts` | Internal metrics snapshot aggregation for AI analytics |
+| `analyticsReport.ts` | AI analytics report storage, listing, and manual trigger |
+| `analyticsReportAction.ts` | AI analytics report generation action (Node.js: calls Anthropic/OpenAI) |
+| `analyticsCron.ts` | Cron job for weekly AI analytics report generation |
+| `research.ts` | Research project and findings CRUD (queries/mutations) |
+| `researchActions.ts` | Research execution actions (Node.js: competitive, topic, realtime, API) |
+| `skillsMarketplace.ts` | Skills marketplace source management, browsing, activation (queries/mutations) |
+| `skillsMarketplaceActions.ts` | Skills marketplace sync action (Node.js: fetches from GitHub, registries) |
+| `supermemory.ts` | Supermemory config queries and mutations |
+| `supermemoryActions.ts` | Supermemory actions (Node.js: add/search memories, store conversations) |
+| `agents.ts` | Multi-agent CRUD (list, get, create, update, remove, reorder, status/mode control) |
+| `souls.ts` | Shared soul document CRUD (list, get, create, update, remove) |
+| `agentAssignments.ts` | Per-agent skill and MCP server assignment management |
+| `agentInteractions.ts` | Agent-to-agent interaction logging and retrieval |
 
 ### convex/agent/
 
 | File | Description |
 |------|-------------|
-| `clawsync.ts` | Agent definition with `languageModel` API and `createDynamicAgent` factory |
+| `clawsync.ts` | Agent definition with `createDynamicAgent(ctx, agentId?)` factory supporting multi-agent |
 | `security.ts` | Security checker (runs on every tool invocation) |
-| `toolLoader.ts` | Assembles tools from skills + MCP servers using `createTool` and `jsonSchema` |
-| `modelRouter.ts` | Resolves provider + model from agentConfig (supports anthropic, openai, xai, openrouter) |
+| `toolLoader.ts` | Assembles tools from skills + MCP servers, scoped per-agent with agent-to-agent interaction tools |
+| `modelRouter.ts` | Resolves provider + model from agentConfig or per-agent config (supports anthropic, openai, xai, openrouter, custom) |
 
 ### convex/voice/
 
 | File | Description |
 |------|-------------|
-| `providers.ts` | Voice TTS/STT actions (ElevenLabs, OpenAI) |
+| `providers.ts` | Voice TTS/STT actions with extracted handlers for type safety (ElevenLabs, Personaplex) |
 | `queries.ts` | Voice provider queries, session mutations (split from providers for `'use node'`) |
 
 ### convex/lib/
@@ -74,6 +94,16 @@ Brief descriptions of key files in the ClawSync codebase.
 | `SyncBoardThreads.tsx` | Conversation thread viewer |
 | `SyncBoardActivity.tsx` | Activity log viewer |
 | `SyncBoardConfig.tsx` | General configuration |
+| `SyncBoardMedia.tsx` | Media file manager (upload, list, delete with Convex or R2) |
+| `SyncBoardStagehand.tsx` | Stagehand browser automation interface |
+| `SyncBoardFirecrawl.tsx` | Firecrawl web scraping interface |
+| `SyncBoardResearch.tsx` | Research project manager (competitive, topic, realtime, API) |
+| `SyncBoardAnalytics.tsx` | AI analytics report viewer and manual trigger |
+| `SyncBoardMemory.tsx` | Supermemory configuration and memory management |
+| `SyncBoardAgents.tsx` | Multi-agent list view with create form |
+| `SyncBoardAgentDetail.tsx` | Agent detail config (soul, model, skills, MCP, activity tabs) |
+| `SyncBoardSouls.tsx` | Shared soul document management |
+| `SyncBoardAgentFeed.tsx` | Unified activity feed across all agents |
 
 ### src/components/
 
@@ -84,6 +114,10 @@ Brief descriptions of key files in the ClawSync codebase.
 | `chat/MessageList.tsx` | Scrollable message list |
 | `syncboard/SyncBoardLayout.tsx` | Admin sidebar layout with navigation |
 | `syncboard/SyncBoardLayout.css` | Sidebar and layout styles |
+| `agents/AgentCard.tsx` | Agent summary card with status, model, and inline controls |
+| `agents/AgentControls.tsx` | Agent operational controls (run, pause, restart, single task, think to continue) |
+| `agents/AgentSelector.tsx` | Agent picker dropdown for chat header |
+| `agents/AgentFeedItem.tsx` | Activity feed entry with agent badge and action icon |
 
 ### src/styles/
 
@@ -127,3 +161,11 @@ Brief descriptions of key files in the ClawSync codebase.
 | `clawsync-security-checklist.md` | Security checklist |
 | `AGENTS.md` | Instructions for AI coding agents |
 | `CLAUDE.md` | Claude-specific project instructions |
+
+## clawsynclanding/dist/
+
+| File | Description |
+|------|-------------|
+| `index.html` | Production landing page with features grid and challenge section |
+| `docs.html` | Production documentation with multi-agent system docs |
+| `features.html` | Production features page (mirrors root features.html) |

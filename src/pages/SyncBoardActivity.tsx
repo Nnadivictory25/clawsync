@@ -53,7 +53,7 @@ export function SyncBoardActivity() {
                   </tr>
                 </thead>
                 <tbody>
-                  {activities.map((activity: { _id: string; actionType: string; summary: string; timestamp: number; visibility: string }) => (
+                  {activities.map((activity) => (
                     <tr key={activity._id}>
                       <td className="time-cell">{formatTime(activity.timestamp)}</td>
                       <td>

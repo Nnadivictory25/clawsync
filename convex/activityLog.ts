@@ -60,12 +60,13 @@ export const listByChannel = query({
   },
 });
 
-// Log an activity (internal)
+// Log an activity (internal, supports optional agentId for multi-agent)
 export const log = internalMutation({
   args: {
     actionType: v.string(),
     summary: v.string(),
     channel: v.optional(v.string()),
+    agentId: v.optional(v.id('agents')),
     visibility: v.optional(v.union(v.literal('public'), v.literal('private'))),
     metadata: v.optional(v.string()),
   },
@@ -75,6 +76,7 @@ export const log = internalMutation({
       actionType: args.actionType,
       summary: args.summary,
       channel: args.channel,
+      agentId: args.agentId,
       visibility: args.visibility ?? 'private',
       metadata: args.metadata,
       timestamp: Date.now(),
@@ -104,6 +106,21 @@ export const remove = mutation({
   handler: async (ctx, args) => {
     await ctx.db.delete(args.id);
     return null;
+  },
+});
+
+// List activity entries for a specific agent
+export const listByAgent = query({
+  args: {
+    agentId: v.id('agents'),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query('activityLog')
+      .withIndex('by_agentId', (q) => q.eq('agentId', args.agentId))
+      .order('desc')
+      .take(args.limit ?? 100);
   },
 });
 

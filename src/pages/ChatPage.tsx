@@ -2,9 +2,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { Link } from 'react-router-dom';
 import { api } from '../../convex/_generated/api';
+import { Id } from '../../convex/_generated/dataModel';
 import { AgentChat } from '../components/chat/AgentChat';
 import { ActivityFeed } from '../components/chat/ActivityFeed';
 import { MagnifyingGlass, Building, CheckCircle, CaretDown } from '@phosphor-icons/react';
+import { AgentSelector } from '../components/agents/AgentSelector';
 import './ChatPage.css';
 
 interface ModelInfo {
@@ -104,6 +106,12 @@ export function ChatPage() {
   const [openRouterModels, setOpenRouterModels] = useState<ModelInfo[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
 
+  // Multi-agent: selected agent ID (persisted in localStorage)
+  const [selectedAgentId, setSelectedAgentId] = useState<Id<'agents'> | null>(() => {
+    const stored = localStorage.getItem('clawsync_selected_agent');
+    return stored ? (stored as Id<'agents'>) : null;
+  });
+
   const apiAny = api as any;
   const useQueryAny = useQuery as any;
   const useMutationAny = useMutation as any;
@@ -188,6 +196,13 @@ export function ChatPage() {
   const currentProviderName = getProviderName(agentConfig?.modelProvider);
   const currentModelName = agentConfig?.model || 'Select model';
 
+  const handleAgentSelect = (agentId: Id<'agents'>) => {
+    setSelectedAgentId(agentId);
+    localStorage.setItem('clawsync_selected_agent', agentId);
+    // Clear thread when switching agents
+    setThreadId(null);
+    localStorage.removeItem('clawsync_thread_id');
+  };
   return (
     <div className="chat-page">
       <header className="chat-header">
@@ -199,116 +214,122 @@ export function ChatPage() {
 
         <div className="chat-center">
           <h1 className="chat-title">{agentConfig?.name || 'ClawSync Agent'}</h1>
-          {uiConfig?.showModelBadge && (
-            <div className="model-dropdown">
-              <button
-                className="badge model-badge"
-                onClick={() => setShowModelDropdown((prev) => !prev)}
-              >
-                {currentProviderName} • {currentModelName}
-                <CaretDown size={12} />
-              </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            <AgentSelector
+              selectedAgentId={selectedAgentId}
+              onSelect={handleAgentSelect}
+            />
+            {uiConfig?.showModelBadge && (
+              <div className="model-dropdown">
+                <button
+                  className="badge model-badge"
+                  onClick={() => setShowModelDropdown((prev) => !prev)}
+                >
+                  {currentProviderName} • {currentModelName}
+                  <CaretDown size={12} />
+                </button>
 
-              {showModelDropdown && (
-                <div className="dropdown-panel">
-                    <div className="dropdown-header">
-                      <div className="dropdown-title">Switch Model</div>
-                      <button className="dropdown-close" onClick={() => setShowModelDropdown(false)}>✕</button>
-                    </div>
-
-                    <div className="provider-tabs">
-                      {PROVIDERS.map((provider) => (
-                        <button
-                          key={provider.id}
-                          className={`provider-tab ${activeProvider === provider.id ? 'active' : ''}`}
-                          onClick={() => {
-                            setActiveProvider(provider.id);
-                            setSearchQuery('');
-                            setSelectedCompany('');
-                          }}
-                        >
-                          {provider.name}
-                        </button>
-                      ))}
-                    </div>
-
-                    {activeProvider === 'openrouter' ? (
-                      <div className="model-browser">
-                        <div className="search-box">
-                          <MagnifyingGlass size={16} />
-                          <input
-                            type="text"
-                            placeholder="Search models (e.g., kimi, gpt, grok)..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                          />
-                        </div>
-
-                        <div className="company-filters">
-                          <button
-                            className={`company-btn ${selectedCompany === '' ? 'active' : ''}`}
-                            onClick={() => setSelectedCompany('')}
-                          >
-                            <Building size={14} />
-                            All ({filteredOpenRouterModels.length})
-                          </button>
-                          {openRouterCompanies.slice(0, 10).map((company) => (
-                            <button
-                              key={company.id}
-                              className={`company-btn ${selectedCompany === company.id ? 'active' : ''}`}
-                              onClick={() => setSelectedCompany(company.id)}
-                            >
-                              {company.name}
-                              <span className="count">{company.count}</span>
-                            </button>
-                          ))}
-                        </div>
-
-                        <div className="model-list">
-                          {isLoadingModels ? (
-                            <div className="loading">Loading models...</div>
-                          ) : filteredOpenRouterModels.length === 0 ? (
-                            <div className="no-results">No models match your search.</div>
-                          ) : (
-                            filteredOpenRouterModels.map((m) => (
-                              <button
-                                key={m.id}
-                                className={`model-item ${agentConfig?.model === m.id ? 'selected' : ''}`}
-                                onClick={() => handleSelectModel('openrouter', m.id)}
-                              >
-                                <div className="model-title">
-                                  {agentConfig?.model === m.id && <CheckCircle size={16} className="check-icon" />}
-                                  {m.name}
-                                </div>
-                                <div className="model-meta">
-                                  <span className="company-badge">{formatCompanyName(m.company)}</span>
-                                  <span className="model-id">{m.id}</span>
-                                </div>
-                              </button>
-                            ))
-                          )}
-                        </div>
+                {showModelDropdown && (
+                  <div className="dropdown-panel">
+                      <div className="dropdown-header">
+                        <div className="dropdown-title">Switch Model</div>
+                        <button className="dropdown-close" onClick={() => setShowModelDropdown(false)}>✕</button>
                       </div>
-                    ) : (
-                      <div className="model-list">
-                        {PROVIDERS.find((p) => p.id === activeProvider)?.models.map((m) => (
+
+                      <div className="provider-tabs">
+                        {PROVIDERS.map((provider) => (
                           <button
-                            key={m}
-                            className={`model-item ${agentConfig?.model === m ? 'selected' : ''}`}
-                            onClick={() => handleSelectModel(activeProvider, m)}
+                            key={provider.id}
+                            className={`provider-tab ${activeProvider === provider.id ? 'active' : ''}`}
+                            onClick={() => {
+                              setActiveProvider(provider.id);
+                              setSearchQuery('');
+                              setSelectedCompany('');
+                            }}
                           >
-                            <div className="model-title">
-                              {agentConfig?.model === m && <CheckCircle size={16} className="check-icon" />}
-                              {m}
-                            </div>
+                            {provider.name}
                           </button>
                         ))}
                       </div>
-                    )}
-                </div>
-              )}
-            </div>
-          )}
+
+                      {activeProvider === 'openrouter' ? (
+                        <div className="model-browser">
+                          <div className="search-box">
+                            <MagnifyingGlass size={16} />
+                            <input
+                              type="text"
+                              placeholder="Search models (e.g., kimi, gpt, grok)..."
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                          </div>
+
+                          <div className="company-filters">
+                            <button
+                              className={`company-btn ${selectedCompany === '' ? 'active' : ''}`}
+                              onClick={() => setSelectedCompany('')}
+                            >
+                              <Building size={14} />
+                              All ({filteredOpenRouterModels.length})
+                            </button>
+                            {openRouterCompanies.slice(0, 10).map((company) => (
+                              <button
+                                key={company.id}
+                                className={`company-btn ${selectedCompany === company.id ? 'active' : ''}`}
+                                onClick={() => setSelectedCompany(company.id)}
+                              >
+                                {company.name}
+                                <span className="count">{company.count}</span>
+                              </button>
+                            ))}
+                          </div>
+
+                          <div className="model-list">
+                            {isLoadingModels ? (
+                              <div className="loading">Loading models...</div>
+                            ) : filteredOpenRouterModels.length === 0 ? (
+                              <div className="no-results">No models match your search.</div>
+                            ) : (
+                              filteredOpenRouterModels.map((m) => (
+                                <button
+                                  key={m.id}
+                                  className={`model-item ${agentConfig?.model === m.id ? 'selected' : ''}`}
+                                  onClick={() => handleSelectModel('openrouter', m.id)}
+                                >
+                                  <div className="model-title">
+                                    {agentConfig?.model === m.id && <CheckCircle size={16} className="check-icon" />}
+                                    {m.name}
+                                  </div>
+                                  <div className="model-meta">
+                                    <span className="company-badge">{formatCompanyName(m.company)}</span>
+                                    <span className="model-id">{m.id}</span>
+                                  </div>
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="model-list">
+                          {PROVIDERS.find((p) => p.id === activeProvider)?.models.map((m) => (
+                            <button
+                              key={m}
+                              className={`model-item ${agentConfig?.model === m ? 'selected' : ''}`}
+                              onClick={() => handleSelectModel(activeProvider, m)}
+                            >
+                              <div className="model-title">
+                                {agentConfig?.model === m && <CheckCircle size={16} className="check-icon" />}
+                                {m}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="chat-header-spacer" />
@@ -322,6 +343,7 @@ export function ChatPage() {
             onThreadChange={setThreadId}
             placeholder={uiConfig?.chatPlaceholder || 'Ask me anything...'}
             maxLength={uiConfig?.maxMessageLength || 4000}
+            agentId={selectedAgentId ?? undefined}
           />
         </div>
 

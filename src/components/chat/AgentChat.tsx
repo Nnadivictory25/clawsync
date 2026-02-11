@@ -49,6 +49,7 @@ interface AgentChatProps {
   onThreadChange: (threadId: string) => void;
   placeholder?: string;
   maxLength?: number;
+  agentId?: string; // Multi-agent support: optional agent ID
 }
 
 export function AgentChat({
@@ -57,6 +58,7 @@ export function AgentChat({
   onThreadChange,
   placeholder = 'Ask me anything...',
   maxLength = 4000,
+  agentId,
 }: AgentChatProps) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -277,6 +279,7 @@ export function AgentChat({
         message: messageText,
         sessionId,
         attachments: undefined,
+        ...(agentId && { agentId: agentId as any }),
       });
 
       if (result.error) {

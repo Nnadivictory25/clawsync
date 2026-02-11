@@ -192,6 +192,29 @@ export const complete = mutation({
       }
     }
 
+    // Create default soul from the soul document
+    const soulId = await ctx.db.insert('souls', {
+      name: 'Default Soul',
+      document: args.soulDocument,
+      systemPrompt: `You are ${args.name}. Follow the guidance in your soul document to shape your responses.`,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Create default agent in the multi-agent system
+    await ctx.db.insert('agents', {
+      name: args.name,
+      soulId,
+      model: args.model,
+      modelProvider: args.modelProvider,
+      status: 'idle',
+      mode: 'auto',
+      isDefault: true,
+      order: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+
     // Log setup completion
     await ctx.db.insert('activityLog', {
       actionType: 'setup_complete',
@@ -201,5 +224,92 @@ export const complete = mutation({
     });
 
     return { success: true };
+  },
+});
+
+// Check if multi-agent migration is needed (agents table empty but agentConfig exists)
+export const needsMigration = query({
+  args: {},
+  returns: v.boolean(),
+  handler: async (ctx) => {
+    const agent = await ctx.db.query('agents').first();
+    if (agent) return false;
+    const config = await ctx.db.query('agentConfig').first();
+    return config !== null;
+  },
+});
+
+// Trigger migration from legacy agentConfig to multi-agent system
+export const migrateToMultiAgent = mutation({
+  args: {},
+  returns: v.object({ success: v.boolean(), agentId: v.optional(v.id('agents')) }),
+  handler: async (ctx) => {
+    // Check if agents table already has entries
+    const existing = await ctx.db.query('agents').first();
+    if (existing) return { success: true, agentId: existing._id };
+
+    // Load legacy agentConfig
+    const config = await ctx.db.query('agentConfig').first();
+    if (!config) return { success: false };
+
+    const now = Date.now();
+
+    // Create soul from config
+    const soulId = await ctx.db.insert('souls', {
+      name: 'Default Soul',
+      document: config.soulDocument,
+      systemPrompt: config.systemPrompt,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Create default agent
+    const agentId = await ctx.db.insert('agents', {
+      name: config.name,
+      soulId,
+      model: config.model,
+      modelProvider: config.modelProvider,
+      fallbackModel: config.fallbackModel,
+      fallbackProvider: config.fallbackProvider,
+      status: 'idle',
+      mode: 'auto',
+      isDefault: true,
+      order: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Assign all active+approved skills to the default agent
+    const skills = await ctx.db
+      .query('skillRegistry')
+      .withIndex('by_status', (q) => q.eq('status', 'active'))
+      .collect();
+    await Promise.all(
+      skills
+        .filter((s) => s.approved)
+        .map((s) =>
+          ctx.db.insert('agentSkillAssignments', {
+            agentId,
+            skillId: s._id,
+            enabled: true,
+          })
+        )
+    );
+
+    // Assign all enabled+approved MCP servers
+    const mcpServers = await ctx.db.query('mcpServers').collect();
+    await Promise.all(
+      mcpServers
+        .filter((m) => m.enabled && m.approved)
+        .map((m) =>
+          ctx.db.insert('agentMcpAssignments', {
+            agentId,
+            mcpServerId: m._id,
+            enabled: true,
+          })
+        )
+    );
+
+    return { success: true, agentId };
   },
 });

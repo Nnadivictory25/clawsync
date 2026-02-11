@@ -8,7 +8,6 @@ import {
   Trash,
   Star,
   PaperPlaneTilt,
-  ArrowsClockwise,
 } from '@phosphor-icons/react';
 
 export function SyncBoardAgentMail() {

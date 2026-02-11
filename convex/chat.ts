@@ -32,6 +32,7 @@ export const send = action({
       fileName: v.string(),
       fileType: v.string(),
     }))),
+    agentId: v.optional(v.id('agents')),
   },
   returns: v.object({
     response: v.optional(v.string()),
@@ -79,8 +80,30 @@ export const send = action({
       // Resolve model for direct API calls
       const resolved = await resolveModel(ctx);
 
+      // Check agent status/mode if agentId provided
+      if (args.agentId) {
+        const agentRecord: any = await ctx.runQuery(
+          internal.agents.getInternal,
+          { agentId: args.agentId }
+        );
+        if (agentRecord) {
+          if (agentRecord.status === 'paused' || agentRecord.mode === 'paused') {
+            return {
+              error: `Agent "${agentRecord.name}" is currently paused.`,
+              threadId: args.threadId,
+            };
+          }
+          if (agentRecord.status === 'error') {
+            return {
+              error: `Agent "${agentRecord.name}" is in an error state.`,
+              threadId: args.threadId,
+            };
+          }
+        }
+      }
+
       // Use dynamic agent for SyncBoard-configured model + tools
-      const agent = await createDynamicAgent(ctx);
+      const agent = await createDynamicAgent(ctx, args.agentId);
 
       // Create or continue thread (destructure per @convex-dev/agent API)
       let threadId = args.threadId;
@@ -94,10 +117,30 @@ export const send = action({
       }
 
       // Load soul document from config for system prompt
-      const config = await ctx.runQuery(internal.agentConfig.getConfig);
-      const system = config
+      // Break circular type with explicit annotation
+      const config: {
+        soulDocument?: string;
+        systemPrompt?: string;
+      } | null = await ctx.runQuery(internal.agentConfig.getConfig as any);
+
+      let system: string | undefined = config
         ? `${config.soulDocument}\n\n${config.systemPrompt}`
         : undefined;
+
+      // Inject Supermemory context if configured (optional)
+      try {
+        const memoryContext: string = await ctx.runAction(
+          internal.supermemoryActions.getMemoryContext,
+          { query: args.message }
+        );
+        if (memoryContext) {
+          system = system
+            ? `${system}\n\n--- Memory Context ---\n${memoryContext}`
+            : memoryContext;
+        }
+      } catch {
+        // Supermemory not configured; continue without it
+      }
 
       // Load tools from skill registry + MCP servers
       const tools = await loadTools(ctx);
@@ -278,12 +321,12 @@ export const send = action({
 
       // Generate response with tools and multi-step support
       const hasTools = Object.keys(tools).length > 0;
-      const result = await thread.generateText(
+      const result: { text: string; steps?: Array<unknown> } = await thread.generateText(
         {
           prompt,
           ...(system && { system }),
           ...(hasTools && { tools }),
-          ...(hasTools && { stopWhen: stepCountIs(5) }),
+          ...(hasTools && { maxSteps: 5 }),
           ...(metadata && { metadata }),
         },
         {
@@ -293,7 +336,7 @@ export const send = action({
         },
       );
 
-      // Log activity
+      // Log activity (include agentId if multi-agent, include attachment count if present)
       const logSummary = hasAttachments 
         ? `Responded to: "${args.message.slice(0, 50)}${args.message.length > 50 ? '...' : ''}" with ${args.attachments!.length} attachment(s)`
         : `Responded to: "${args.message.slice(0, 50)}${args.message.length > 50 ? '...' : ''}"`;
@@ -302,6 +345,7 @@ export const send = action({
         actionType: 'chat_message',
         summary: logSummary,
         visibility: 'private',
+        ...(args.agentId && { agentId: args.agentId }),
       });
 
       // Extract tool call info from steps
@@ -328,6 +372,15 @@ export const send = action({
         }
       }
 
+      // Store conversation in Supermemory (fire and forget)
+      try {
+        await ctx.runAction(internal.supermemoryActions.storeConversation, {
+          conversation: `User: ${args.message}\nAssistant: ${result.text}`,
+        });
+      } catch {
+        // Supermemory not configured; skip
+      }
+
       return {
         response: result.text,
         threadId,
@@ -349,6 +402,7 @@ export const stream = internalAction({
     threadId: v.optional(v.string()),
     message: v.string(),
     sessionId: v.string(),
+    agentId: v.optional(v.id('agents')),
   },
   returns: v.object({
     response: v.string(),
@@ -365,7 +419,7 @@ export const stream = internalAction({
     }
 
     // Use dynamic agent for SyncBoard-configured model + tools
-    const agent = await createDynamicAgent(ctx);
+    const agent = await createDynamicAgent(ctx, args.agentId);
 
     let threadId = args.threadId;
     let thread;
@@ -420,6 +474,7 @@ export const apiSend = internalAction({
     sessionId: v.string(),
     apiKeyId: v.optional(v.id('apiKeys')),
     imageUrl: v.optional(v.string()),
+    agentId: v.optional(v.id('agents')),
   },
   returns: v.object({
     response: v.optional(v.string()),
@@ -445,7 +500,7 @@ export const apiSend = internalAction({
 
       // Use dynamic agent for SyncBoard-configured model + tools
       console.log('Creating dynamic agent...');
-      const agent = await createDynamicAgent(ctx);
+      const agent = await createDynamicAgent(ctx, args.agentId);
       console.log('Agent created successfully');
 
       // Create or continue thread
@@ -552,13 +607,14 @@ export const apiSend = internalAction({
       }
       console.log('Response generated successfully');
 
-      // Log activity
+      // Log activity (include agentId if multi-agent)
       const summary = message.length > 50 ? message.slice(0, 50) + '...' : message;
       await ctx.runMutation(internal.activityLog.log, {
         actionType: 'api_chat',
         summary: `API: "${summary}"`,
         visibility: 'private',
         channel: 'api',
+        ...(args.agentId && { agentId: args.agentId }),
       });
 
       // Get token usage from result if available
