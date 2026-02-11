@@ -60,6 +60,23 @@ export async function loadTools(ctx: ActionCtx): Promise<ToolSet> {
       try {
         console.log(`[MCP] Fetching tools from ${server.name} at ${server.url}`);
         
+        // Resolve API key for this server (for discovery phase)
+        const discoveryHeaders: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json, text/event-stream, */*',
+          'User-Agent': 'ClawSync-MCP-Client/1.0',
+        };
+        
+        if (server.apiKeyEnvVar) {
+          const apiKey = process.env[server.apiKeyEnvVar];
+          if (apiKey) {
+            discoveryHeaders['Authorization'] = `Bearer ${apiKey}`;
+            console.log(`[MCP] Using API key for ${server.name} discovery from ${server.apiKeyEnvVar}`);
+          } else {
+            console.warn(`[MCP] API key env var ${server.apiKeyEnvVar} not set for ${server.name}`);
+          }
+        }
+        
         // Try both regular POST and GET for tools/list
         let response;
         let responseText;
@@ -68,11 +85,7 @@ export async function loadTools(ctx: ActionCtx): Promise<ToolSet> {
         try {
           response = await fetch(server.url, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json, text/event-stream, */*',
-              'User-Agent': 'ClawSync-MCP-Client/1.0',
-            },
+            headers: discoveryHeaders,
             body: JSON.stringify({ 
               jsonrpc: '2.0',
               method: 'tools/list', 
@@ -82,13 +95,12 @@ export async function loadTools(ctx: ActionCtx): Promise<ToolSet> {
           });
           responseText = await response.text();
         } catch (e) {
-          // Try GET as fallback
+          // Try GET as fallback (with same headers minus Content-Type)
+          const getHeaders = { ...discoveryHeaders };
+          delete getHeaders['Content-Type'];
           response = await fetch(server.url, {
             method: 'GET',
-            headers: {
-              'Accept': 'application/json, text/event-stream, */*',
-              'User-Agent': 'ClawSync-MCP-Client/1.0',
-            },
+            headers: getHeaders,
           });
           responseText = await response.text();
         }
