@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:convex": "npx convex dev --typecheck=disable",
+    "dev:convex": "npx convex dev",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
