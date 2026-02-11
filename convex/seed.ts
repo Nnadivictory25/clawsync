@@ -61,7 +61,7 @@ you to my owner directly than give you wrong information.`;
         name: 'ClawSync Agent',
         soulDocument: defaultSoul,
         systemPrompt: 'You are a helpful AI assistant.',
-        model: 'gemini-2.5-pro',
+        model: 'gemini-3-flash-preview',
         modelProvider: 'google',
         voiceEnabled: false,
         domainAllowlist: [],
@@ -80,6 +80,14 @@ you to my owner directly than give you wrong information.`;
 
     // Seed model providers
     const providers = [
+      {
+        providerId: 'google',
+        displayName: 'Google (Gemini)',
+        baseUrl: 'https://generativelanguage.googleapis.com',
+        apiKeyEnvVar: 'GOOGLE_GENERATIVE_AI_API_KEY',
+        enabled: true,
+        rateLimitPerMinute: 300,
+      },
       {
         providerId: 'anthropic',
         displayName: 'Anthropic',

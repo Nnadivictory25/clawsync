@@ -60,6 +60,14 @@ export const complete = mutation({
     // Seed model providers
     const providers = [
       {
+        providerId: 'google',
+        displayName: 'Google (Gemini)',
+        baseUrl: 'https://generativelanguage.googleapis.com',
+        apiKeyEnvVar: 'GOOGLE_GENERATIVE_AI_API_KEY',
+        enabled: true,
+        rateLimitPerMinute: 300,
+      },
+      {
         providerId: 'anthropic',
         displayName: 'Anthropic',
         baseUrl: 'https://api.anthropic.com',

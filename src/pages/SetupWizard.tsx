@@ -41,6 +41,10 @@ My knowledge comes from what my owner has configured. This includes:
 `;
 
 const MODEL_OPTIONS = [
+  { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash', provider: 'google', description: 'Latest fast model - best for most tasks' },
+  { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro', provider: 'google', description: 'Latest most capable model for complex reasoning' },
+  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'google', description: 'Stable capable model' },
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'google', description: 'Stable fast model' },
   { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', provider: 'anthropic', description: 'Fast, capable, balanced' },
   { id: 'claude-opus-4-20250514', name: 'Claude Opus 4', provider: 'anthropic', description: 'Most capable, best reasoning' },
   { id: 'gpt-5', name: 'GPT-5', provider: 'openai', description: 'Latest OpenAI model with built-in thinking' },
@@ -51,9 +55,6 @@ const MODEL_OPTIONS = [
   { id: 'o3', name: 'o3', provider: 'openai', description: 'Reasoning model for complex tasks' },
   { id: 'o3-pro', name: 'o3 Pro', provider: 'openai', description: 'Most powerful reasoning model' },
   { id: 'o4-mini', name: 'o4-mini', provider: 'openai', description: 'Fast reasoning model' },
-  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'google', description: 'Google most capable model' },
-  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'google', description: 'Fast and efficient' },
-  { id: 'gemini-2.0-pro', name: 'Gemini 2.0 Pro', provider: 'google', description: 'Advanced multimodal model' },
   { id: 'grok-3', name: 'Grok 3', provider: 'xai', description: 'xAI flagship model' },
   { id: 'grok-3-fast', name: 'Grok 3 Fast', provider: 'xai', description: 'Fast Grok variant' },
 ];
@@ -65,7 +66,7 @@ export function SetupWizard() {
   const [step, setStep] = useState<Step>('welcome');
   const [agentName, setAgentName] = useState('My AI Agent');
   const [soulDocument, setSoulDocument] = useState(DEFAULT_SOUL);
-  const [selectedModel, setSelectedModel] = useState(MODEL_OPTIONS[0]);
+  const [selectedModel, setSelectedModel] = useState(MODEL_OPTIONS.find(m => m.id === 'gemini-3-flash-preview') || MODEL_OPTIONS[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

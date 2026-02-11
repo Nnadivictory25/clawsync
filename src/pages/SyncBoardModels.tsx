@@ -29,12 +29,12 @@ const PROVIDERS = [
     'o4-mini-high',
   ]},
   { id: 'google', name: 'Google', models: [
+    'gemini-3-flash-preview',
+    'gemini-3-pro-preview',
     'gemini-2.5-pro',
     'gemini-2.5-flash',
     'gemini-2.0-flash',
     'gemini-2.0-pro',
-    'gemini-1.5-pro',
-    'gemini-1.5-flash',
   ]},
   { id: 'openrouter', name: 'OpenRouter', models: [] as string[] },
   { id: 'opencode-zen', name: 'OpenCode Zen', models: ['claude-sonnet', 'gpt-4o'] },
@@ -75,8 +75,8 @@ export function SyncBoardModels() {
   const updateConfig = useMutation(api.agentConfig.update);
   const listModels = useAction(api.agent.modelSwitching.listAvailableModels);
 
-  const [provider, setProvider] = useState('anthropic');
-  const [model, setModel] = useState('claude-sonnet-4-20250514');
+  const [provider, setProvider] = useState('google');
+  const [model, setModel] = useState('gemini-3-flash-preview');
   const [fallbackProvider, setFallbackProvider] = useState('');
   const [fallbackModel, setFallbackModel] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -127,8 +127,8 @@ export function SyncBoardModels() {
 
   useEffect(() => {
     if (config) {
-      setProvider(config.modelProvider || 'anthropic');
-      setModel(config.model || 'claude-sonnet-4-20250514');
+      setProvider(config.modelProvider || 'google');
+      setModel(config.model || 'gemini-3-flash-preview');
       setFallbackProvider(config.fallbackProvider || '');
       setFallbackModel(config.fallbackModel || '');
     }
